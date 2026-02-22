@@ -38,6 +38,7 @@ import { RepositorySearchPage } from "./pages/RepositorySearchPage";
 import { ManageRepositoryPage } from "./pages/ManageRepositoryPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import CreateRepoPage from "./pages/CreateRepoPage";
 
 /**
  * Component to redirect logged-in users away from landing page
@@ -80,7 +81,7 @@ export const App: React.FC = () => {
                                 <Route path="/settings" element={<SettingsPage />} />
                                 <Route path="/organizations/new" element={<CreateOrganizationPage />} />
                                 <Route path="/workflows/editor" element={<WorkflowEditorPage />} />
-
+                                <Route path="/projects/new" element={<CreateRepoPage />} />
                                 {/* User profile route */}
                                 <Route path="/:username" element={<UserProfilePage />} />
                             </Route>
@@ -107,6 +108,7 @@ export const App: React.FC = () => {
                             <Route path="/:owner/:repo/pulls/new" element={<PullRequestCreatePage />} />
                             <Route path="/:owner/:repo/actions" element={<ActionsPage />} />
                             <Route path="/:owner/:repo/insights" element={<InsightsPage />} />
+
                         </Route>
 
                         {/* Fallback */}
