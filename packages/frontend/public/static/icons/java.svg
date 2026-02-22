@@ -1,0 +1,9 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- File background -->
+  <path d="M4 2C2.9 2 2 2.9 2 4v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8l-6-6H4z" fill="#ED8B00" stroke="#999" stroke-width="0.5"/>
+  <!-- Top right fold -->
+  <path d="M14 2v6h6V8l-6-6z" fill="#F5A623" stroke="#999" stroke-width="0.5"/>
+  <!-- Java cup -->
+  <path d="M 9 10 Q 9 15 12 15 Q 15 15 15 10 Z" fill="none" stroke="#fff" stroke-width="1"/>
+  <path d="M 10 9 L 14 9" stroke="#fff" stroke-width="0.8"/>
+</svg>

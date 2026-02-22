@@ -1,0 +1,6 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Folder background -->
+  <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" fill="#FFB950" stroke="#E8A600" stroke-width="0.5"/>
+  <!-- Folder tab -->
+  <rect x="4" y="4" width="6" height="2" fill="#FFC470" stroke="#E8A600" stroke-width="0.5"/>
+</svg>

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+*.tsbuildinfo
+coverage/
+.turbo/
+tmp/
+.DS_Store
+data/
+*.sqlite
+*.sqlite3

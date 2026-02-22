@@ -1,0 +1,12 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- File background -->
+  <path d="M4 2C2.9 2 2 2.9 2 4v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8l-6-6H4z" fill="#DE4C36" stroke="#999" stroke-width="0.5"/>
+  <!-- Top right fold -->
+  <path d="M14 2v6h6V8l-6-6z" fill="#E66B4B" stroke="#999" stroke-width="0.5"/>
+  <!-- Git logo -->
+  <path d="M 12 10 L 14 13 L 12 14 L 10 13 Z" fill="#fff"/>
+  <circle cx="9" cy="16" r="0.8" fill="#fff"/>
+  <circle cx="15" cy="16" r="0.8" fill="#fff"/>
+  <line x1="9" y1="15.2" x2="12" y2="14" stroke="#fff" stroke-width="0.5"/>
+  <line x1="15" y1="15.2" x2="12" y2="14" stroke="#fff" stroke-width="0.5"/>
+</svg>

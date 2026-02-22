@@ -1,0 +1,20 @@
+{
+    "name": "@platform/cluster",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc -b",
+        "clean": "rm -rf dist *.tsbuildinfo",
+        "test": "vitest run",
+        "lint": "tsc --noEmit",
+        "cluster:start": "npm run build && node dist/start.js"
+    },
+    "dependencies": {
+        "@platform/shared": "workspace:*",
+        "@platform/utils": "workspace:*",
+        "dotenv": "^17.3.1"
+    }
+}

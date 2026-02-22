@@ -1,0 +1,39 @@
+{
+    "name": "devforge",
+    "version": "1.0.0",
+    "private": true,
+    "description": "DevForge - A comprehensive Git hosting platform with CI pipelines, collaborative editor, cluster management, and AI integration",
+    "scripts": {
+        "build": "pnpm -r run build",
+        "start": "pnpm run build && node packages/backend/dist/index.js",
+        "test": "pnpm -r run test",
+        "lint": "pnpm -r run lint",
+        "dev": "pnpm -r run dev",
+        "clean": "pnpm -r run clean",
+        "docker": "docker build -t devforge:latest . && docker run -p 3000:3000 -p 3001:3001 -v \"%cd%/data:/app/data\" devforge:latest",
+        "docker:build": "docker build -t devforge:latest .",
+        "docker:run": "docker run -p 3000:3000 -p 3001:3001 -v \"%cd%/data:/app/data\" devforge:latest",
+        "cluster:start": "pnpm -r run cluster:start"
+    },
+    "engines": {
+        "node": ">=20.0.0",
+        "pnpm": ">=9.0.0"
+    },
+    "devDependencies": {
+        "@types/node": "^25.2.3",
+        "@types/nodemailer": "^7.0.10",
+        "typescript": "^5.9.3",
+        "vitest": "^4.0.18"
+    },
+    "dependencies": {
+        "@tailwindcss/typography": "^0.5.19",
+        "autoprefixer": "^10.4.24",
+        "node-cron": "^4.2.1",
+        "nodemailer": "^8.0.1",
+        "react-markdown": "^10.1.0",
+        "react-router-dom": "^7.13.0",
+        "react-syntax-highlighter": "^16.1.0",
+        "tailwindcss": "^3.4.19",
+        "yaml": "^2.8.2"
+    }
+}

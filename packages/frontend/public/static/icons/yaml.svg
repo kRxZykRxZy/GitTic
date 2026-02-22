@@ -1,0 +1,8 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- File background -->
+  <path d="M4 2C2.9 2 2 2.9 2 4v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8l-6-6H4z" fill="#CB171E" stroke="#999" stroke-width="0.5"/>
+  <!-- Top right fold -->
+  <path d="M14 2v6h6V8l-6-6z" fill="#E82B2F" stroke="#999" stroke-width="0.5"/>
+  <!-- YAML text -->
+  <text x="6" y="16" font-family="Arial, sans-serif" font-size="7" font-weight="bold" fill="#fff">YAML</text>
+</svg>

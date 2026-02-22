@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../shared" },
+    { "path": "../utils" },
+    { "path": "../auth" },
+    { "path": "../git" },
+    { "path": "../ai" },
+    { "path": "../cluster" },
+    { "path": "../editor" }
+  ]
+}

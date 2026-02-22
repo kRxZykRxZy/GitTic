@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/utils" },
+    { "path": "packages/shared" },
+    { "path": "packages/auth" },
+    { "path": "packages/git" },
+    { "path": "packages/ai" },
+    { "path": "packages/cluster" },
+    { "path": "packages/editor" },
+    { "path": "packages/backend" },
+    { "path": "packages/frontend" }
+  ]
+}
