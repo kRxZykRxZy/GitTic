@@ -1,4 +1,4 @@
-# DevForge
+# GitTic
 
 A comprehensive development platform combining Git hosting, CI/CD pipelines, collaborative editing, cluster management, and AI-powered features.
 

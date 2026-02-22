@@ -48,7 +48,7 @@ interface WorkflowExecuteResponse {
 
 /**
  * Workflow Editor and Executor
- * Create, edit, and run .devforge/workflows/*.yaml files
+ * Create, edit, and run .gittic/workflows/*.yaml files
  */
 export const WorkflowEditor: React.FC = () => {
     const toast = useToast();
@@ -149,7 +149,7 @@ export const WorkflowEditor: React.FC = () => {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 350px", gap: "24px" }}>
                 <div style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "var(--radius)", padding: "24px" }}>
                     <div style={{ fontSize: "14px", fontWeight: 600, marginBottom: "12px" }}>
-                        .devforge/workflows/ci.yml
+                        .gittic/workflows/ci.yml
                     </div>
                     <textarea
                         style={{

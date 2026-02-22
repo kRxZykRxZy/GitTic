@@ -340,7 +340,7 @@ export const RegisterForm: React.FC = () => {
                 />
                 {errors.dateOfBirth && <span style={errorStyle}>{errors.dateOfBirth}</span>}
                 <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                    You must be at least 13 years old to use DevForge
+                    You must be at least 13 years old to use GitTic
                 </span>
             </div>
 

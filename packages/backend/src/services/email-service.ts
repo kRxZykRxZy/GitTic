@@ -28,7 +28,7 @@ function getEmailConfig(): EmailConfig {
     return {
         enabled: process.env.EMAIL_ENABLED === "true",
         provider: (process.env.EMAIL_PROVIDER as any) || "smtp",
-        from: process.env.EMAIL_FROM || "DevForge <noreply@devforge.io>",
+        from: process.env.EMAIL_FROM || "GitTic <noreply@gittic.io>",
         smtp: {
             host: process.env.SMTP_HOST || "smtp.gmail.com",
             port: parseInt(process.env.SMTP_PORT || "587"),
@@ -146,7 +146,7 @@ export async function sendIssueNotification(
             <h3 style="color: #57606a;">${issueTitle}</h3>
             ${body ? `<div style="padding: 16px; background: #f6f8fa; border-left: 3px solid #0969da; margin: 16px 0;">${body}</div>` : ""}
             <p>
-                <a href="${issueUrl}" style="color: #0969da; text-decoration: none;">View it on DevForge</a>
+                <a href="${issueUrl}" style="color: #0969da; text-decoration: none;">View it on GitTic</a>
             </p>
             <hr style="border: 0; border-top: 1px solid #d0d7de; margin: 24px 0;">
             <p style="color: #57606a; font-size: 12px;">
@@ -183,7 +183,7 @@ export async function sendPRNotification(
             <h3 style="color: #57606a;">${prTitle}</h3>
             ${body ? `<div style="padding: 16px; background: #f6f8fa; border-left: 3px solid #8250df; margin: 16px 0;">${body}</div>` : ""}
             <p>
-                <a href="${prUrl}" style="color: #8250df; text-decoration: none;">View it on DevForge</a>
+                <a href="${prUrl}" style="color: #8250df; text-decoration: none;">View it on GitTic</a>
             </p>
             <hr style="border: 0; border-top: 1px solid #d0d7de; margin: 24px 0;">
             <p style="color: #57606a; font-size: 12px;">
@@ -210,7 +210,7 @@ export async function sendMentionNotification(
                 ${body}
             </div>
             <p>
-                <a href="${url}" style="color: #0969da; text-decoration: none;">View it on DevForge</a>
+                <a href="${url}" style="color: #0969da; text-decoration: none;">View it on GitTic</a>
             </p>
         </div>
     `;
@@ -219,10 +219,10 @@ export async function sendMentionNotification(
 }
 
 export async function sendWelcomeEmail(to: string, username: string): Promise<void> {
-    const subject = "Welcome to DevForge!";
+    const subject = "Welcome to GitTic!";
     const html = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
-            <h1 style="color: #24292f;">Welcome to DevForge, ${username}! 🎉</h1>
+            <h1 style="color: #24292f;">Welcome to GitTic, ${username}! 🎉</h1>
             <p style="font-size: 16px; color: #57606a;">
                 Your account has been created successfully. You can now:
             </p>
@@ -248,7 +248,7 @@ export async function sendPasswordResetEmail(
     resetToken: string,
     resetUrl: string,
 ): Promise<void> {
-    const subject = "Reset your DevForge password";
+    const subject = "Reset your GitTic password";
     const html = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
             <h2 style="color: #24292f;">Password Reset Request</h2>
@@ -283,7 +283,7 @@ export async function sendTeamInviteEmail(
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
             <h2 style="color: #24292f;">${inviterName} invited you to join ${orgName}</h2>
             <p style="font-size: 16px; color: #57606a;">
-                You've been invited to collaborate on DevForge.
+                You've been invited to collaborate on GitTic.
             </p>
             <p style="font-size: 16px;">
                 <a href="${inviteUrl}" style="display: inline-block; padding: 12px 24px; background: #2da44e; color: white; text-decoration: none; border-radius: 6px;">

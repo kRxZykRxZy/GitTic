@@ -1,8 +1,8 @@
 {
-    "name": "devforge",
+    "name": "gittic",
     "version": "1.0.0",
     "private": true,
-    "description": "DevForge - A comprehensive Git hosting platform with CI pipelines, collaborative editor, cluster management, and AI integration",
+    "description": "GitTic - A comprehensive Git hosting platform with CI pipelines, collaborative editor, cluster management, and AI integration",
     "scripts": {
         "build": "pnpm -r run build",
         "start": "pnpm run build && node packages/backend/dist/index.js",
@@ -10,9 +10,9 @@
         "lint": "pnpm -r run lint",
         "dev": "pnpm -r run dev",
         "clean": "pnpm -r run clean",
-        "docker": "docker build -t devforge:latest . && docker run -p 3000:3000 -p 3001:3001 -v \"%cd%/data:/app/data\" devforge:latest",
-        "docker:build": "docker build -t devforge:latest .",
-        "docker:run": "docker run -p 3000:3000 -p 3001:3001 -v \"%cd%/data:/app/data\" devforge:latest",
+        "docker": "docker build -t gittic:latest . && docker run -p 3000:3000 -p 3001:3001 -v \"%cd%/data:/app/data\" gittic:latest",
+        "docker:build": "docker build -t gittic:latest .",
+        "docker:run": "docker run -p 3000:3000 -p 3001:3001 -v \"%cd%/data:/app/data\" gittic:latest",
         "cluster:start": "pnpm -r run cluster:start"
     },
     "engines": {
