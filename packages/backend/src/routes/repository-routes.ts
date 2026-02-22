@@ -20,6 +20,84 @@ import { getConfig } from "../config/app-config.js";
  */
 const router = Router();
 
+/**
+ * POST /api/repositories
+ * Create a new repository (project).
+ * Requires authentication.
+ * @body org - Organization ID or 'default' for personal repo
+ * @body name - Repository name
+ * @body description - Repository description
+ */
+router.post(
+    "/",
+    requireAuth,
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { org, name, description } = req.body;
+            if (!name || typeof name !== "string" || name.trim().length === 0) {
+                res.status(400).json({ error: "Repository name is required", code: "VALIDATION_ERROR" });
+                return;
+            }
+            // Determine ownerId
+            let ownerId = req.user!.userId;
+            if (org && org !== "default") {
+                // Validate org exists and user has access
+                const organization = userRepo.findById(org);
+                if (!organization) {
+                    res.status(400).json({ error: "Organization not found", code: "VALIDATION_ERROR" });
+                    return;
+                }
+                ownerId = org;
+            }
+            // Create repo metadata
+            const slug = name.trim().toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+            const storagePath = `repos/${ownerId}/${slug}`;
+            const project = projectRepo.createProject({
+                ownerId,
+                name: name.trim(),
+                description: description || "",
+                slug,
+                storagePath,
+            });
+            // Use git package to initialize repo and store as git pack
+            const repoRoot = getRepositoryFsRoot(project);
+            await ensureRepositoryExistsOnDisk(repoRoot);
+            try {
+                const { initBareRepo } = await import("@platform/git");
+                await initBareRepo(repoRoot);
+            } catch (err) {
+                // If git package fails, delete project and return error
+                projectRepo.deleteProject(project.id);
+                res.status(500).json({ error: "Failed to initialize git repository", code: "GIT_ERROR" });
+                return;
+            }
+            res.status(201).json({ success: true, repository: sanitizeRepository(project, true) });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
+/**
+ * GET /api/orgs
+ * List all organizations the user can access.
+ * Requires authentication.
+ */
+router.get(
+    "/orgs",
+    requireAuth,
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            // Replace with your actual org lookup logic
+            // If userRepo.getOrgsForUser does not exist, return an empty array or implement your own logic
+            const orgs: any[] = [];
+            res.json({ orgs });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
+
 /** Default pagination values. */
 const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 20;
@@ -394,7 +472,7 @@ router.get(
         }
     },
 );
- 
+
 
 /* ── Commit History and Details ──────────────────────────────── */
 
@@ -441,21 +519,21 @@ router.get(
 
             // Use git utilities to get commit history
             const { listCommits } = await import("@platform/git");
-            
+
             const commits = await listCommits(getRepositoryFsRoot(project), {
                 branch: branch || project.defaultBranch || "main",
                 author: author || undefined,
                 limit: perPage,
                 offset: (page - 1) * perPage,
             });
-            
+
             // Get total count for pagination
             const allCommits = await listCommits(getRepositoryFsRoot(project), {
                 branch: branch || project.defaultBranch || "main",
                 author: author || undefined,
                 limit: 1000, // Get more for accurate count
             });
-            
+
             const total = allCommits.length;
             const totalPages = Math.ceil(total / perPage);
 
@@ -516,9 +594,9 @@ router.get(
 
             // Use git utilities to get commit details
             const { getCommit } = await import("@platform/git");
-            
+
             const commit = await getCommit(getRepositoryFsRoot(project), sha);
-            
+
             if (!commit) {
                 res.status(404).json({ error: "Commit not found", code: "NOT_FOUND" });
                 return;
@@ -568,10 +646,10 @@ router.get(
 
             // Use git utilities to get commit diff
             const { getDiff, getCommitParents } = await import("@platform/git");
-            
+
             // Get the parent commit(s) to compare against
             const parents = await getCommitParents(getRepositoryFsRoot(project), sha);
-            
+
             if (parents.length === 0) {
                 // This is a root commit, show all files
                 const { execFile } = await import("node:child_process");
@@ -587,10 +665,10 @@ router.get(
                 res.send(diff);
                 return;
             }
-            
+
             // Compare with the first parent (for merge commits, this shows the primary changes)
             const diff = await getDiff(getRepositoryFsRoot(project), parents[0], sha);
-            
+
             if (!diff) {
                 res.status(404).json({ error: "Commit diff not found", code: "NOT_FOUND" });
                 return;
@@ -647,7 +725,7 @@ router.post(
 
             // Use git utilities to revert commit
             const { revertCommit } = await import("@platform/git");
-            
+
             const revertCommitResult = await revertCommit(getRepositoryFsRoot(project), sha, {
                 message: message || `Revert commit ${sha.substring(0, 7)}`,
                 author: {
@@ -708,11 +786,11 @@ router.get(
 
             // Use git utilities to list branches
             const { listBranches } = await import("@platform/git");
-            
+
             const branches = await listBranches(getRepositoryFsRoot(project));
             const total = branches.length;
             const totalPages = Math.ceil(total / perPage);
-            
+
             // Apply pagination
             const paginatedBranches = branches.slice((page - 1) * perPage, page * perPage);
 
@@ -769,9 +847,9 @@ router.get(
 
             // Use git utilities to get branch details
             const { getBranchDetails } = await import("@platform/git");
-            
+
             const branch = await getBranchDetails(getRepositoryFsRoot(project), name);
-            
+
             if (!branch) {
                 res.status(404).json({ error: "Branch not found", code: "NOT_FOUND" });
                 return;
@@ -839,7 +917,7 @@ router.post(
 
             // Use git utilities to create branch
             const { createBranch } = await import("@platform/git");
-            
+
             await createBranch(getRepositoryFsRoot(project), name, from || project.defaultBranch);
 
             res.status(201).json({ message: `Branch '${name}' created successfully` });
@@ -897,7 +975,7 @@ router.delete(
 
             // Use git utilities to delete branch
             const { deleteBranch } = await import("@platform/git");
-            
+
             await deleteBranch(getRepositoryFsRoot(project), name);
 
             res.json({ message: `Branch '${name}' deleted successfully` });
@@ -945,7 +1023,7 @@ router.delete(
 
             // Use git utilities to delete tag
             const { deleteTag } = await import("@platform/git");
-            
+
             await deleteTag(getRepositoryFsRoot(project), name);
 
             res.json({ message: `Tag '${name}' deleted successfully` });
@@ -1053,7 +1131,7 @@ router.get(
             // Get real statistics from database and repository
             const branches = ["main"]; // TODO: Get actual branches from git
             const commitCount = 0; // TODO: Get actual commit count from git
-            
+
             res.json({
                 commits: commitCount,
                 branches: branches.length,
