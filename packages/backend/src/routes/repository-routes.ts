@@ -25,7 +25,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 20;
 const MAX_PER_PAGE = 100;
 
-const README_CANDIDATES = ["README.md", "README", "Readme.md", "readme.md"];
+const README_CANDIDATES = ["README.md", "README", "Readme.md", "readme.md", "ReadMe.md", "README.MD", "readme", "readme.MD", "Readme", "Readme.MD"];
 
 /**
  * Clamp pagination parameters to safe ranges.
@@ -394,6 +394,7 @@ router.get(
         }
     },
 );
+ 
 
 /* ── Commit History and Details ──────────────────────────────── */
 

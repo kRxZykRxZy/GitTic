@@ -151,6 +151,13 @@ export const RepositoryPageNew: React.FC = () => {
               </div>
             )}
 
+            {activeTab === "issues" && (
+              <div className="p-6">
+                <h2 className="text-xl font-semibold mb-4">Issues</h2>
+                <p className="text-text-secondary">Issues view coming soon...</p>
+              </div>
+            )}
+
             {activeTab === "webhooks" && (
               <div className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Webhooks</h2>
