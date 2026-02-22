@@ -13,7 +13,7 @@ const CreateRepoPage = () => {
     useEffect(() => {
         async function fetchOrgs() {
             try {
-                const res = await fetch('/api/orgs', { credentials: 'include' });
+                const res = await fetch('/api/v1/orgs', { credentials: 'include' });
                 const data = await res.json();
                 setOrgs(data.orgs || []);
             } catch (e) {
@@ -29,7 +29,7 @@ const CreateRepoPage = () => {
         setError('');
         setSuccess(false);
         try {
-            const res = await fetch('/api/repositories', {
+            const res = await fetch('/api/v1/repositories', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
