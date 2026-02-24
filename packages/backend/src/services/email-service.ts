@@ -233,7 +233,7 @@ export async function sendWelcomeEmail(to: string, username: string): Promise<vo
                 <li>Use DevChat to communicate with other developers</li>
             </ul>
             <p style="font-size: 16px;">
-                <a href="/dashboard" style="display: inline-block; padding: 12px 24px; background: #2da44e; color: white; text-decoration: none; border-radius: 6px;">
+                <a href="${process.env.SERVER_URL}/dashboard" style="display: inline-block; padding: 12px 24px; background: #2da44e; color: white; text-decoration: none; border-radius: 6px;">
                     Go to Dashboard
                 </a>
             </p>
