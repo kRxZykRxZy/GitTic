@@ -57,6 +57,73 @@ export interface AnalyticsSnapshot {
   issuesClosed: DashboardPoint[];
 }
 
+let analyticsSchemaReady: boolean | null = null;
+
+/**
+ * Returns true when both analytics tables are present in the current database.
+ */
+function analyticsTablesExist(db = getDb()): boolean {
+  const tables = db
+    .prepare(
+      `SELECT name FROM sqlite_master
+       WHERE type = 'table' AND name IN ('analytics_events', 'analytics_rollups_daily')`,
+    )
+    .all() as Array<{ name: string }>;
+
+  const names = new Set(tables.map((t) => t.name));
+  return names.has("analytics_events") && names.has("analytics_rollups_daily");
+}
+
+/**
+ * Ensures the analytics tables exist, creating them if they are missing.
+ * Returns true on success (or if tables already exist) and false on failure.
+ */
+export function ensureAnalyticsTables(): boolean {
+  if (analyticsSchemaReady === true) return true;
+
+  const db = getDb();
+  try {
+    if (!analyticsTablesExist(db)) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS analytics_events (
+          id             TEXT PRIMARY KEY,
+          event_type     TEXT NOT NULL,
+          actor_user_id  TEXT REFERENCES users(id) ON DELETE SET NULL,
+          repository_id  TEXT REFERENCES repositories(id) ON DELETE SET NULL,
+          value          REAL NOT NULL DEFAULT 1,
+          metadata       TEXT NOT NULL DEFAULT '{}',
+          occurred_at    TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_analytics_events_type ON analytics_events(event_type);
+        CREATE INDEX IF NOT EXISTS idx_analytics_events_actor ON analytics_events(actor_user_id);
+        CREATE INDEX IF NOT EXISTS idx_analytics_events_repo ON analytics_events(repository_id);
+        CREATE INDEX IF NOT EXISTS idx_analytics_events_occurred_at ON analytics_events(occurred_at);
+
+        CREATE TABLE IF NOT EXISTS analytics_rollups_daily (
+          day            TEXT NOT NULL,
+          event_type     TEXT NOT NULL,
+          actor_user_id  TEXT,
+          repository_id  TEXT,
+          event_count    INTEGER NOT NULL,
+          value_sum      REAL NOT NULL,
+          updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+          PRIMARY KEY (day, event_type, actor_user_id, repository_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_day ON analytics_rollups_daily(day);
+        CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_event_type ON analytics_rollups_daily(event_type);
+        CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_actor ON analytics_rollups_daily(actor_user_id);
+        CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_repo ON analytics_rollups_daily(repository_id);
+      `);
+    }
+    analyticsSchemaReady = true;
+    return analyticsSchemaReady;
+  } catch (error) {
+    console.error("[analytics] Failed to ensure analytics tables exist:", error);
+    analyticsSchemaReady = false;
+    return false;
+  }
+}
+
 function toAnalyticsEvent(row: AnalyticsEventRow): AnalyticsEvent {
   return {
     id: row.id,
@@ -83,7 +150,12 @@ export function logAnalyticsEvent(input: {
   repositoryId?: string;
   value?: number;
   metadata?: Record<string, string | number | boolean | null>;
-}): AnalyticsEvent {
+}): AnalyticsEvent | null {
+  if (!ensureAnalyticsTables()) {
+    console.warn("[analytics] Skipping analytics event because analytics tables are unavailable.");
+    return null;
+  }
+
   const db = getDb();
   const id = randomUUID();
   const now = new Date().toISOString();
@@ -228,6 +300,11 @@ export function getAdminDashboardSnapshot(days = 30): AnalyticsSnapshot {
 }
 
 export function rollupDailyAnalytics(days = 2): number {
+  if (!ensureAnalyticsTables()) {
+    console.warn("[analytics] Skipping rollup because analytics tables are unavailable.");
+    return 0;
+  }
+
   const db = getDb();
 
   const result = db
@@ -258,6 +335,11 @@ export function rollupDailyAnalytics(days = 2): number {
 }
 
 export function purgeExpiredAnalyticsEvents(retentionDays = 180): number {
+  if (!ensureAnalyticsTables()) {
+    console.warn("[analytics] Skipping retention purge because analytics tables are unavailable.");
+    return 0;
+  }
+
   const db = getDb();
   const result = db
     .prepare(`DELETE FROM analytics_events WHERE occurred_at < datetime('now', ?)`)
