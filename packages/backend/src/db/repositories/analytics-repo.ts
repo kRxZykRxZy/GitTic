@@ -57,6 +57,9 @@ export interface AnalyticsSnapshot {
   issuesClosed: DashboardPoint[];
 }
 
+/**
+ * Returns true when both analytics tables are present in the current database.
+ */
 function analyticsTablesExist(db = getDb()): boolean {
   const tables = db
     .prepare(
@@ -69,6 +72,10 @@ function analyticsTablesExist(db = getDb()): boolean {
   return names.has("analytics_events") && names.has("analytics_rollups_daily");
 }
 
+/**
+ * Ensures the analytics tables exist, creating them if they are missing.
+ * Returns true on success (or if tables already exist) and false on failure.
+ */
 export function ensureAnalyticsTables(): boolean {
   const db = getDb();
   try {
