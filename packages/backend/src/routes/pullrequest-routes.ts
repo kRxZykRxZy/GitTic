@@ -12,6 +12,7 @@ import * as path from "node:path";
 import * as branchProtectionRepo from "../db/repositories/branch-protection-repo.js";
 import * as prStatusCheckRepo from "../db/repositories/pr-status-check-repo.js";
 import { evaluateMergeDecision } from "../services/pr-merge-decision-service.js";
+import * as analyticsRepo from "../db/repositories/analytics-repo.js";
 
 const router = Router();
 

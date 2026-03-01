@@ -8,6 +8,7 @@ import { startMetricsCollector } from "./services/metrics-collector.js";
 import { scheduleBackgroundIndex } from "./services/indexing-service.js";
 import * as clusterRepo from "./db/repositories/cluster-repo.js";
 import { startAnalyticsMaintenance } from "./services/analytics-maintenance.js";
+import { closeWebSocketGateway } from "./services/websocket-gateway.js";
 
 /**
  * Print a startup banner with basic platform info.
