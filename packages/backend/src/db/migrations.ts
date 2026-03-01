@@ -835,31 +835,16 @@ const MIGRATIONS: Migration[] = [
   },
   {
     version: 29,
-    description: "Create PR status checks and branch protection settings tables",
+    description: "Create project_stars table for per-user repository stars",
     sql: `
-      CREATE TABLE IF NOT EXISTS pr_status_checks (
-        id           TEXT PRIMARY KEY,
-        pr_id        TEXT NOT NULL REFERENCES pull_requests(id) ON DELETE CASCADE,
-        check_name   TEXT NOT NULL,
-        status       TEXT NOT NULL,
-        details      TEXT,
-        created_at   TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
-        UNIQUE(pr_id, check_name)
+      CREATE TABLE IF NOT EXISTS project_stars (
+        user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (user_id, project_id)
       );
-      CREATE INDEX IF NOT EXISTS idx_pr_status_checks_pr ON pr_status_checks(pr_id);
-
-      CREATE TABLE IF NOT EXISTS project_branch_protection (
-        project_id                    TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
-        require_pull_request          INTEGER NOT NULL DEFAULT 1,
-        required_approving_review_count INTEGER NOT NULL DEFAULT 0,
-        require_status_checks         INTEGER NOT NULL DEFAULT 0,
-        required_status_checks        TEXT NOT NULL DEFAULT '[]',
-        enforce_admins                INTEGER NOT NULL DEFAULT 0,
-        require_linear_history        INTEGER NOT NULL DEFAULT 0,
-        created_at                    TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at                    TEXT NOT NULL DEFAULT (datetime('now'))
-      );
+      CREATE INDEX IF NOT EXISTS idx_project_stars_project ON project_stars(project_id);
+      CREATE INDEX IF NOT EXISTS idx_project_stars_user ON project_stars(user_id);
     `,
   },
 ];

@@ -79,3 +79,37 @@ export interface BranchProtectionRule {
   allowDeletions: boolean;
   requireSignedCommits: boolean;
 }
+
+
+export interface RepositoryStatsResponse {
+  commits: number;
+  branches: number;
+  tags: number;
+  openPullRequests: number;
+  stars: number;
+  forks: number;
+}
+
+export interface RepositorySearchResult {
+  path: string;
+  content: string;
+  lineNumbers: number[];
+  language: string;
+}
+
+export interface RepositorySearchPagination {
+  page: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+  capped: boolean;
+}
+
+export interface RepositorySearchResponse {
+  query: string;
+  repository: string;
+  results: RepositorySearchResult[];
+  pagination: RepositorySearchPagination;
+  total: number;
+}
