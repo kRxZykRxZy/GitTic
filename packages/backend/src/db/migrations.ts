@@ -833,6 +833,40 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
     `,
   },
+  {
+    version: 29,
+    description: "Create analytics_events and analytics_rollups_daily tables",
+    sql: `
+      CREATE TABLE IF NOT EXISTS analytics_events (
+        id             TEXT PRIMARY KEY,
+        event_type     TEXT NOT NULL,
+        actor_user_id  TEXT REFERENCES users(id) ON DELETE SET NULL,
+        repository_id  TEXT REFERENCES repositories(id) ON DELETE SET NULL,
+        value          REAL NOT NULL DEFAULT 1,
+        metadata       TEXT NOT NULL DEFAULT '{}',
+        occurred_at    TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_type ON analytics_events(event_type);
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_actor ON analytics_events(actor_user_id);
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_repo ON analytics_events(repository_id);
+      CREATE INDEX IF NOT EXISTS idx_analytics_events_occurred_at ON analytics_events(occurred_at);
+
+      CREATE TABLE IF NOT EXISTS analytics_rollups_daily (
+        day            TEXT NOT NULL,
+        event_type     TEXT NOT NULL,
+        actor_user_id  TEXT,
+        repository_id  TEXT,
+        event_count    INTEGER NOT NULL,
+        value_sum      REAL NOT NULL,
+        updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (day, event_type, actor_user_id, repository_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_day ON analytics_rollups_daily(day);
+      CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_event_type ON analytics_rollups_daily(event_type);
+      CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_actor ON analytics_rollups_daily(actor_user_id);
+      CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_repo ON analytics_rollups_daily(repository_id);
+    `,
+  },
 ];
 
 
