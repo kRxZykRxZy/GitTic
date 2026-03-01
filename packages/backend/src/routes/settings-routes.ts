@@ -1,6 +1,9 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { requireAuth } from "../middleware/auth-guard.js";
 import { validate } from "../middleware/input-validator.js";
+import * as userRepo from "../db/repositories/user-repo.js";
+import * as projectRepo from "../db/repositories/project-repo.js";
+import * as branchProtectionRepo from "../db/repositories/branch-protection-repo.js";
 
 /**
  * Repository settings and configuration routes
@@ -18,13 +21,25 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { owner, repo } = req.params;
-      
-      // Mock settings - in production, fetch from database
+      const ownerUser = userRepo.findByUsername(String(owner));
+      if (!ownerUser) {
+        res.status(404).json({ error: "Repository owner not found", code: "NOT_FOUND" });
+        return;
+      }
+
+      const project = projectRepo.findBySlug(ownerUser.id, String(repo));
+      if (!project) {
+        res.status(404).json({ error: "Repository not found", code: "NOT_FOUND" });
+        return;
+      }
+
+      const protection = branchProtectionRepo.findByProjectId(project.id);
+
       const settings = {
-        name: repo,
-        description: "Repository description",
-        visibility: "public",
-        defaultBranch: "main",
+        name: project.name,
+        description: project.description || "",
+        visibility: project.isPrivate ? "private" : "public",
+        defaultBranch: project.defaultBranch,
         hasIssues: true,
         hasProjects: true,
         hasWiki: true,
@@ -34,6 +49,14 @@ router.get(
         deleteBranchOnMerge: false,
         archived: false,
         disabled: false,
+        branchProtection: {
+          requirePullRequest: protection.requirePullRequest,
+          requiredApprovingReviewCount: protection.requiredApprovingReviewCount,
+          requireStatusChecks: protection.requireStatusChecks,
+          requiredStatusChecks: protection.requiredStatusChecks,
+          enforceAdmins: protection.enforceAdmins,
+          requireLinearHistory: protection.requireLinearHistory,
+        },
         features: {
           issues: true,
           projects: true,
@@ -62,16 +85,39 @@ router.patch(
     { field: "description", location: "body", type: "string", max: 500 },
     { field: "visibility", location: "body", type: "string", pattern: /^(public|private|internal)$/ },
     { field: "defaultBranch", location: "body", type: "string", min: 1, max: 255 },
+    { field: "branchProtection", location: "body", type: "object" },
   ]),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { owner, repo } = req.params;
       const updates = req.body;
 
-      // In production: validate ownership and update database
-      res.json({ 
+      const ownerUser = userRepo.findByUsername(String(owner));
+      if (!ownerUser) {
+        res.status(404).json({ error: "Repository owner not found", code: "NOT_FOUND" });
+        return;
+      }
+
+      const project = projectRepo.findBySlug(ownerUser.id, String(repo));
+      if (!project) {
+        res.status(404).json({ error: "Repository not found", code: "NOT_FOUND" });
+        return;
+      }
+
+      if (updates.branchProtection && typeof updates.branchProtection === "object") {
+        branchProtectionRepo.upsertByProjectId(project.id, {
+          requirePullRequest: updates.branchProtection.requirePullRequest,
+          requiredApprovingReviewCount: updates.branchProtection.requiredApprovingReviewCount,
+          requireStatusChecks: updates.branchProtection.requireStatusChecks,
+          requiredStatusChecks: updates.branchProtection.requiredStatusChecks,
+          enforceAdmins: updates.branchProtection.enforceAdmins,
+          requireLinearHistory: updates.branchProtection.requireLinearHistory,
+        });
+      }
+
+      res.json({
         message: "Repository settings updated",
-        ...updates
+        ...updates,
       });
     } catch (err) {
       next(err);
