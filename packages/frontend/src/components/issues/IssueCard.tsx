@@ -178,7 +178,7 @@ const IssueCard: React.FC<IssueCardProps> = ({
 
       {/* Milestone */}
       {issue.milestone && (
-        <div className="mb-3 p-2 bg-white bg-opacity-50 rounded text-xs">
+        <div className="mb-3 p-2 bg-white/50 rounded text-xs">
           <div className="font-medium text-gray-700 mb-1">{issue.milestone.title}</div>
           <div className="w-full bg-gray-200 rounded-full h-1.5">
             <div

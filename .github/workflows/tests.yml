@@ -24,7 +24,10 @@ jobs:
         run: npm install -g pnpm
         
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Check frontend style dependency alignment
+        run: pnpm run check:frontend-style-deps
 
       - name: Build server
         run: pnpm run build
