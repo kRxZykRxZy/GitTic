@@ -9,6 +9,7 @@ import * as commentRepo from "../db/repositories/comment-repo.js";
 import * as labelRepo from "../db/repositories/label-repo.js";
 import { getConfig } from "../config/app-config.js";
 import * as path from "node:path";
+import * as analyticsRepo from "../db/repositories/analytics-repo.js";
 
 const router = Router();
 
@@ -133,6 +134,13 @@ router.post("/:owner/:repo/pulls", requireAuth,
       headBranch: head,
       authorId: req.user!.userId,
       isDraft: draft,
+    });
+
+    analyticsRepo.logAnalyticsEvent({
+      eventType: "pr.open",
+      actorUserId: req.user!.userId,
+      repositoryId: project.id,
+      metadata: { prId: pr.id, number: pr.number },
     });
     
     res.status(201).json(pr);
@@ -429,6 +437,12 @@ router.post("/:owner/:repo/pulls/:number/merge", requireAuth,
     // Update PR status to merged in database
     const mergeCommitSha = mergeResult.sha || "abc123def456";
     prRepo.markAsMerged(pr.id, mergeCommitSha);
+    analyticsRepo.logAnalyticsEvent({
+      eventType: "pr.merge",
+      actorUserId: req.user!.userId,
+      repositoryId: project.id,
+      metadata: { prId: pr.id, number: pr.number, mergeMethod: String(merge_method) },
+    });
     
     // TODO: In a real implementation:
     // 1. Create merge commit with custom title/message if provided

@@ -6,6 +6,7 @@ import { validate } from "../middleware/input-validator.js";
 import { getConfig } from "../config/app-config.js";
 import * as userRepo from "../db/repositories/user-repo.js";
 import * as sessionRepo from "../db/repositories/session-repo.js";
+import * as analyticsRepo from "../db/repositories/analytics-repo.js";
 
 /**
  * Authentication routes.
@@ -176,6 +177,12 @@ router.post(
         userAgent: req.get("user-agent"),
       });
 
+      analyticsRepo.logAnalyticsEvent({
+        eventType: "auth.login",
+        actorUserId: user.id,
+        metadata: { source: "register" },
+      });
+
       res.status(201).json({
         user: { id: user.id, username: user.username, email: user.email, role: user.role },
         token,
@@ -239,6 +246,12 @@ router.post(
         expiresAt,
         ipAddress: req.ip ?? req.socket.remoteAddress,
         userAgent: req.get("user-agent"),
+      });
+
+      analyticsRepo.logAnalyticsEvent({
+        eventType: "auth.login",
+        actorUserId: user.id,
+        metadata: { source: "login" },
       });
 
       res.json({

@@ -2,7 +2,271 @@ import { randomUUID } from "node:crypto";
 import type { AuditLog, PageView, Metric } from "@platform/shared";
 import { getDb } from "../connection.js";
 
-/* ── Row types ─────────────────────────────────────────────── */
+/* ── Event types ──────────────────────────────────────────── */
+
+export const ANALYTICS_EVENT_TYPES = [
+  "auth.login",
+  "repo.create",
+  "repo.push",
+  "pr.open",
+  "pr.merge",
+  "issue.open",
+  "issue.close",
+] as const;
+
+export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
+
+interface AnalyticsEventRow {
+  id: string;
+  event_type: AnalyticsEventType;
+  actor_user_id: string | null;
+  repository_id: string | null;
+  value: number;
+  metadata: string;
+  occurred_at: string;
+}
+
+export interface AnalyticsEvent {
+  id: string;
+  eventType: AnalyticsEventType;
+  actorUserId?: string;
+  repositoryId?: string;
+  value: number;
+  metadata: Record<string, string | number | boolean | null>;
+  occurredAt: string;
+}
+
+export interface DashboardPoint {
+  label: string;
+  value: number;
+  timestamp: string;
+}
+
+export interface AnalyticsSnapshot {
+  totalRepos: number;
+  totalLogins: number;
+  totalPushes: number;
+  totalPrsOpened: number;
+  totalIssuesOpened: number;
+  totalIssuesClosed: number;
+  repoCreations: DashboardPoint[];
+  logins: DashboardPoint[];
+  pushes: DashboardPoint[];
+  prsOpened: DashboardPoint[];
+  issuesOpened: DashboardPoint[];
+  issuesClosed: DashboardPoint[];
+}
+
+function toAnalyticsEvent(row: AnalyticsEventRow): AnalyticsEvent {
+  return {
+    id: row.id,
+    eventType: row.event_type,
+    actorUserId: row.actor_user_id ?? undefined,
+    repositoryId: row.repository_id ?? undefined,
+    value: row.value,
+    metadata: JSON.parse(row.metadata) as Record<string, string | number | boolean | null>,
+    occurredAt: row.occurred_at,
+  };
+}
+
+function mapPoints(rows: Array<{ label: string; value: number }>): DashboardPoint[] {
+  return rows.map((row) => ({
+    label: row.label,
+    value: Number(row.value ?? 0),
+    timestamp: `${row.label}T00:00:00.000Z`,
+  }));
+}
+
+export function logAnalyticsEvent(input: {
+  eventType: AnalyticsEventType;
+  actorUserId?: string;
+  repositoryId?: string;
+  value?: number;
+  metadata?: Record<string, string | number | boolean | null>;
+}): AnalyticsEvent {
+  const db = getDb();
+  const id = randomUUID();
+  const now = new Date().toISOString();
+
+  db.prepare(
+    `INSERT INTO analytics_events (id, event_type, actor_user_id, repository_id, value, metadata, occurred_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    id,
+    input.eventType,
+    input.actorUserId ?? null,
+    input.repositoryId ?? null,
+    input.value ?? 1,
+    JSON.stringify(input.metadata ?? {}),
+    now,
+  );
+
+  return {
+    id,
+    eventType: input.eventType,
+    actorUserId: input.actorUserId,
+    repositoryId: input.repositoryId,
+    value: input.value ?? 1,
+    metadata: input.metadata ?? {},
+    occurredAt: now,
+  };
+}
+
+export function listRecentEventsByActor(actorUserId: string, limit = 20): AnalyticsEvent[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT id, event_type, actor_user_id, repository_id, value, metadata, occurred_at
+       FROM analytics_events
+       WHERE actor_user_id = ?
+       ORDER BY occurred_at DESC
+       LIMIT ?`,
+    )
+    .all(actorUserId, limit) as AnalyticsEventRow[];
+
+  return rows.map(toAnalyticsEvent);
+}
+
+export function getUserDashboardStats(userId: string, days = 30): {
+  totalRepos: number;
+  totalCommits: number;
+  totalPullRequests: number;
+  totalIssuesOpened: number;
+  totalIssuesClosed: number;
+  activity: DashboardPoint[];
+} {
+  const db = getDb();
+
+  const totalRepos =
+    (db.prepare(`SELECT COUNT(*) AS count FROM projects WHERE owner_id = ?`).get(userId) as { count: number } | undefined)?.count ?? 0;
+
+  const [totalCommits, totalPullRequests, totalIssuesOpened, totalIssuesClosed] = [
+    "repo.push",
+    "pr.open",
+    "issue.open",
+    "issue.close",
+  ].map((eventType) =>
+    ((db
+      .prepare(
+        `SELECT COALESCE(SUM(value), 0) AS count
+         FROM analytics_events
+         WHERE actor_user_id = ?
+           AND event_type = ?
+           AND occurred_at >= datetime('now', ?)`,
+      )
+      .get(userId, eventType, `-${days} days`) as { count: number } | undefined)?.count ?? 0),
+  );
+
+  const activityRows = db
+    .prepare(
+      `SELECT date(occurred_at) AS label, COALESCE(SUM(value), 0) AS value
+       FROM analytics_events
+       WHERE actor_user_id = ?
+         AND occurred_at >= datetime('now', ?)
+       GROUP BY label
+       ORDER BY label`,
+    )
+    .all(userId, `-${days} days`) as Array<{ label: string; value: number }>;
+
+  return {
+    totalRepos,
+    totalCommits,
+    totalPullRequests,
+    totalIssuesOpened,
+    totalIssuesClosed,
+    activity: mapPoints(activityRows),
+  };
+}
+
+export function getAdminDashboardSnapshot(days = 30): AnalyticsSnapshot {
+  const db = getDb();
+
+  const getTotalFor = (eventType: AnalyticsEventType): number =>
+    (db
+      .prepare(
+        `SELECT COALESCE(SUM(value), 0) AS total
+         FROM analytics_events
+         WHERE event_type = ?
+           AND occurred_at >= datetime('now', ?)`,
+      )
+      .get(eventType, `-${days} days`) as { total: number } | undefined)?.total ?? 0;
+
+  const getSeriesFor = (eventType: AnalyticsEventType): DashboardPoint[] => {
+    const rows = db
+      .prepare(
+        `SELECT date(occurred_at) AS label, COALESCE(SUM(value), 0) AS value
+         FROM analytics_events
+         WHERE event_type = ?
+           AND occurred_at >= datetime('now', ?)
+         GROUP BY label
+         ORDER BY label`,
+      )
+      .all(eventType, `-${days} days`) as Array<{ label: string; value: number }>;
+
+    return mapPoints(rows);
+  };
+
+  const totalRepos =
+    (db
+      .prepare(`SELECT COUNT(*) AS count FROM projects WHERE created_at >= datetime('now', ?)`)
+      .get(`-${days} days`) as { count: number } | undefined)?.count ?? 0;
+
+  return {
+    totalRepos,
+    totalLogins: getTotalFor("auth.login"),
+    totalPushes: getTotalFor("repo.push"),
+    totalPrsOpened: getTotalFor("pr.open"),
+    totalIssuesOpened: getTotalFor("issue.open"),
+    totalIssuesClosed: getTotalFor("issue.close"),
+    repoCreations: getSeriesFor("repo.create"),
+    logins: getSeriesFor("auth.login"),
+    pushes: getSeriesFor("repo.push"),
+    prsOpened: getSeriesFor("pr.open"),
+    issuesOpened: getSeriesFor("issue.open"),
+    issuesClosed: getSeriesFor("issue.close"),
+  };
+}
+
+export function rollupDailyAnalytics(days = 2): number {
+  const db = getDb();
+
+  const result = db
+    .prepare(
+      `INSERT INTO analytics_rollups_daily (
+         day, event_type, actor_user_id, repository_id, event_count, value_sum, updated_at
+       )
+       SELECT
+         date(occurred_at) AS day,
+         event_type,
+         actor_user_id,
+         repository_id,
+         COUNT(*) AS event_count,
+         COALESCE(SUM(value), 0) AS value_sum,
+         datetime('now') AS updated_at
+       FROM analytics_events
+       WHERE occurred_at >= datetime('now', ?)
+       GROUP BY day, event_type, actor_user_id, repository_id
+       ON CONFLICT(day, event_type, actor_user_id, repository_id)
+       DO UPDATE SET
+         event_count = excluded.event_count,
+         value_sum = excluded.value_sum,
+         updated_at = excluded.updated_at`,
+    )
+    .run(`-${Math.max(days, 1)} days`);
+
+  return Number(result.changes ?? 0);
+}
+
+export function purgeExpiredAnalyticsEvents(retentionDays = 180): number {
+  const db = getDb();
+  const result = db
+    .prepare(`DELETE FROM analytics_events WHERE occurred_at < datetime('now', ?)`)
+    .run(`-${Math.max(retentionDays, 1)} days`);
+
+  return Number(result.changes ?? 0);
+}
+
+/* ── Existing analytics APIs retained for compatibility ───── */
 
 interface AuditLogRow {
   id: string;
@@ -33,8 +297,6 @@ interface MetricRow {
   cluster_id: string | null;
   timestamp: string;
 }
-
-/* ── Row mappers ───────────────────────────────────────────── */
 
 function toAuditLog(r: AuditLogRow): AuditLog {
   return {
@@ -72,9 +334,6 @@ function toMetric(r: MetricRow): Metric {
   };
 }
 
-/* ── Write operations ──────────────────────────────────────── */
-
-/** Log a page view event. */
 export function logPageView(input: Omit<PageView, "id" | "timestamp">): PageView {
   const db = getDb();
   const id = randomUUID();
@@ -85,10 +344,17 @@ export function logPageView(input: Omit<PageView, "id" | "timestamp">): PageView
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   ).run(id, input.path, input.userId || null, input.ipAddress || null, input.userAgent || null, input.referrer || null, now);
 
-  return { ...input, id, timestamp: now } as PageView;
+  return toPageView({
+    id,
+    path: input.path,
+    user_id: input.userId ?? null,
+    ip_address: input.ipAddress ?? null,
+    user_agent: input.userAgent ?? null,
+    referrer: input.referrer ?? null,
+    timestamp: now,
+  });
 }
 
-/** Log a numeric metric data point. */
 export function logMetric(input: Omit<Metric, "id" | "timestamp">): Metric {
   const db = getDb();
   const id = randomUUID();
@@ -99,10 +365,16 @@ export function logMetric(input: Omit<Metric, "id" | "timestamp">): Metric {
      VALUES (?, ?, ?, ?, ?, ?)`,
   ).run(id, input.name, input.value, JSON.stringify(input.tags), input.clusterId || null, now);
 
-  return { ...input, id, timestamp: now };
+  return toMetric({
+    id,
+    name: input.name,
+    value: input.value,
+    tags: JSON.stringify(input.tags),
+    cluster_id: input.clusterId ?? null,
+    timestamp: now,
+  });
 }
 
-/** Log an audit trail entry. */
 export function logAudit(input: Omit<AuditLog, "id" | "timestamp">): AuditLog {
   const db = getDb();
   const id = randomUUID();
@@ -113,17 +385,21 @@ export function logAudit(input: Omit<AuditLog, "id" | "timestamp">): AuditLog {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(id, input.userId, input.action, input.resource, input.resourceId, input.details || null, input.ipAddress || null, now);
 
-  return { ...input, id, timestamp: now } as AuditLog;
+  return toAuditLog({
+    id,
+    user_id: input.userId,
+    action: input.action,
+    resource: input.resource,
+    resource_id: input.resourceId,
+    details: input.details ?? null,
+    ip_address: input.ipAddress ?? null,
+    timestamp: now,
+  });
 }
-
-/* ── Stat helpers (time-series aggregates) ─────────────────── */
 
 interface StatRow { label: string; count: number }
 interface ValueRow { label: string; total: number }
 
-/**
- * Page view counts grouped by day for the last N days.
- */
 export function getPageViewStats(days = 30): StatRow[] {
   const db = getDb();
   return db
@@ -136,9 +412,6 @@ export function getPageViewStats(days = 30): StatRow[] {
     .all(`-${days} days`) as StatRow[];
 }
 
-/**
- * New user sign-ups per day for the last N days.
- */
 export function getUserGrowth(days = 30): StatRow[] {
   const db = getDb();
   return db
@@ -151,9 +424,6 @@ export function getUserGrowth(days = 30): StatRow[] {
     .all(`-${days} days`) as StatRow[];
 }
 
-/**
- * Number of distinct active users (with sessions) per day.
- */
 export function getActiveUsers(days = 30): StatRow[] {
   const db = getDb();
   return db
@@ -166,9 +436,6 @@ export function getActiveUsers(days = 30): StatRow[] {
     .all(`-${days} days`) as StatRow[];
 }
 
-/**
- * New projects created per day.
- */
 export function getProjectTrends(days = 30): StatRow[] {
   const db = getDb();
   return db
@@ -181,9 +448,6 @@ export function getProjectTrends(days = 30): StatRow[] {
     .all(`-${days} days`) as StatRow[];
 }
 
-/**
- * Total clone counts aggregated per day via metrics.
- */
 export function getCloneStats(days = 30): ValueRow[] {
   const db = getDb();
   return db
@@ -196,9 +460,6 @@ export function getCloneStats(days = 30): ValueRow[] {
     .all(`-${days} days`) as ValueRow[];
 }
 
-/**
- * Build (pipeline run) outcomes per day.
- */
 export function getBuildStats(days = 30): StatRow[] {
   const db = getDb();
   return db
@@ -211,9 +472,6 @@ export function getBuildStats(days = 30): StatRow[] {
     .all(`-${days} days`) as StatRow[];
 }
 
-/**
- * Average cluster CPU load per day.
- */
 export function getClusterLoad(days = 7): ValueRow[] {
   const db = getDb();
   return db
@@ -226,14 +484,7 @@ export function getClusterLoad(days = 7): ValueRow[] {
     .all(`-${days} days`) as ValueRow[];
 }
 
-/**
- * Generic time-range query for any metric.
- */
-export function getCustomTimeRange(
-  metricName: string,
-  from: string,
-  to: string,
-): ValueRow[] {
+export function getCustomTimeRange(metricName: string, from: string, to: string): ValueRow[] {
   const db = getDb();
   return db
     .prepare(
