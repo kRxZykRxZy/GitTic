@@ -57,10 +57,7 @@ export interface AnalyticsSnapshot {
   issuesClosed: DashboardPoint[];
 }
 
-let analyticsSchemaReady = false;
-
-function analyticsTablesExist(): boolean {
-  const db = getDb();
+function analyticsTablesExist(db = getDb()): boolean {
   const tables = db
     .prepare(
       `SELECT name FROM sqlite_master
@@ -73,12 +70,9 @@ function analyticsTablesExist(): boolean {
 }
 
 export function ensureAnalyticsTables(): boolean {
-  if (analyticsSchemaReady) return true;
-
   const db = getDb();
-
   try {
-    if (!analyticsTablesExist()) {
+    if (!analyticsTablesExist(db)) {
       db.exec(`
         CREATE TABLE IF NOT EXISTS analytics_events (
           id             TEXT PRIMARY KEY,
@@ -110,14 +104,11 @@ export function ensureAnalyticsTables(): boolean {
         CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_repo ON analytics_rollups_daily(repository_id);
       `);
     }
-
-    analyticsSchemaReady = analyticsTablesExist();
+    return true;
   } catch (error) {
     console.error("[analytics] Failed to ensure analytics tables exist:", error);
-    analyticsSchemaReady = false;
+    return false;
   }
-
-  return analyticsSchemaReady;
 }
 
 function toAnalyticsEvent(row: AnalyticsEventRow): AnalyticsEvent {
@@ -146,18 +137,10 @@ export function logAnalyticsEvent(input: {
   repositoryId?: string;
   value?: number;
   metadata?: Record<string, string | number | boolean | null>;
-}): AnalyticsEvent {
+}): AnalyticsEvent | null {
   if (!ensureAnalyticsTables()) {
-    const now = new Date().toISOString();
-    return {
-      id: randomUUID(),
-      eventType: input.eventType,
-      actorUserId: input.actorUserId,
-      repositoryId: input.repositoryId,
-      value: input.value ?? 1,
-      metadata: input.metadata ?? {},
-      occurredAt: now,
-    };
+    console.warn("[analytics] Skipping analytics event because analytics tables are unavailable.");
+    return null;
   }
 
   const db = getDb();
