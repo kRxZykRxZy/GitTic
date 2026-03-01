@@ -13,7 +13,8 @@
         "docker": "docker build -t gittic:latest . && docker run -p 3000:3000 -p 3001:3001 -v \"%cd%/data:/app/data\" gittic:latest",
         "docker:build": "docker build -t gittic:latest .",
         "docker:run": "docker run -p 3000:3000 -p 3001:3001 -v \"%cd%/data:/app/data\" gittic:latest",
-        "cluster:start": "pnpm -r run cluster:start"
+        "cluster:start": "pnpm -r run cluster:start",
+        "check:shared-src-clean": "node scripts/check-shared-src-generated-files.mjs"
     },
     "engines": {
         "node": ">=20.0.0",

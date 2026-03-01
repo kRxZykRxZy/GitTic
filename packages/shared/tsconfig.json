@@ -6,9 +6,13 @@
     "lib": ["ES2022", "DOM"],
     "composite": true
   },
-  "include": ["src"],
+  "include": ["src/**/*.ts"],
   "exclude": [
     "src/__tests__",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "src/**/*.js",
+    "src/**/*.js.map",
+    "src/**/*.d.ts",
+    "src/**/*.d.ts.map"
   ]
 }

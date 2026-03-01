@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Check shared package source tree is clean
+        run: pnpm run check:shared-src-clean
+
       - name: Build server
         run: pnpm run build
         
