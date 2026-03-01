@@ -29,5 +29,8 @@ jobs:
       - name: Build server
         run: pnpm run build
         
+      - name: Frontend coverage gate
+        run: pnpm --filter @platform/frontend run coverage
+
       - name: Run tests
         run: pnpm test

@@ -8,7 +8,10 @@
     "dev": "vite",
     "preview": "vite preview",
     "lint": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "test": "vitest run -c vitest.config.ts",
+    "test:watch": "vitest -c vitest.config.ts",
+    "coverage": "vitest run -c vitest.config.ts --coverage"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -31,6 +34,12 @@
     "rimraf": "^6.1.2",
     "tailwindcss": "^4.2.0",
     "typescript": "^5.9.3",
-    "vite": "^6.0.11"
+    "vite": "^6.0.11",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@vitest/coverage-v8": "^4.0.0",
+    "jsdom": "^25.0.1",
+    "vitest": "^4.0.18"
   }
 }
