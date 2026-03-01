@@ -57,6 +57,8 @@ export interface AnalyticsSnapshot {
   issuesClosed: DashboardPoint[];
 }
 
+let analyticsSchemaReady: boolean | null = null;
+
 /**
  * Returns true when both analytics tables are present in the current database.
  */
@@ -77,6 +79,8 @@ function analyticsTablesExist(db = getDb()): boolean {
  * Returns true on success (or if tables already exist) and false on failure.
  */
 export function ensureAnalyticsTables(): boolean {
+  if (analyticsSchemaReady === true) return true;
+
   const db = getDb();
   try {
     if (!analyticsTablesExist(db)) {
@@ -111,9 +115,11 @@ export function ensureAnalyticsTables(): boolean {
         CREATE INDEX IF NOT EXISTS idx_analytics_rollups_daily_repo ON analytics_rollups_daily(repository_id);
       `);
     }
-    return true;
+    analyticsSchemaReady = true;
+    return analyticsSchemaReady;
   } catch (error) {
     console.error("[analytics] Failed to ensure analytics tables exist:", error);
+    analyticsSchemaReady = false;
     return false;
   }
 }
@@ -294,7 +300,10 @@ export function getAdminDashboardSnapshot(days = 30): AnalyticsSnapshot {
 }
 
 export function rollupDailyAnalytics(days = 2): number {
-  if (!ensureAnalyticsTables()) return 0;
+  if (!ensureAnalyticsTables()) {
+    console.warn("[analytics] Skipping rollup because analytics tables are unavailable.");
+    return 0;
+  }
 
   const db = getDb();
 
@@ -326,7 +335,10 @@ export function rollupDailyAnalytics(days = 2): number {
 }
 
 export function purgeExpiredAnalyticsEvents(retentionDays = 180): number {
-  if (!ensureAnalyticsTables()) return 0;
+  if (!ensureAnalyticsTables()) {
+    console.warn("[analytics] Skipping retention purge because analytics tables are unavailable.");
+    return 0;
+  }
 
   const db = getDb();
   const result = db
