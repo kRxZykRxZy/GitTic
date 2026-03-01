@@ -4,14 +4,22 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { isPathSafe } from "@platform/utils";
 
-const execFileAsync = promisify(execFile);
-
 /**
  * Initialize a bare Git repository for storing packfiles only.
  */
+const execFileAsync = promisify(execFile);
+
 export async function initBareRepo(storagePath: string): Promise<void> {
-  await mkdir(storagePath, { recursive: true });
-  await execFileAsync("git", ["init", "--bare", storagePath]);
+  try {
+    // Create the directory recursively
+    await mkdir(storagePath, { recursive: true });
+
+    // Run the git command to initialize a bare repository
+    await execFileAsync("git", ["init", "--bare", storagePath]);
+  } catch (error) {
+    console.error('Error initializing bare repository:', error);
+    throw error; // Optionally rethrow after logging
+  }
 }
 
 /**

@@ -25,7 +25,7 @@ import * as analyticsRepo from "../db/repositories/analytics-repo.js";
 const router = Router();
 
 /**
- * POST /api/repositories
+ * POST /api/v1/repositories
  * Create a new repository (project).
  * Requires authentication.
  * @body org - Organization ID or 'default' for personal repo
@@ -69,12 +69,12 @@ router.post(
             try {
                 const { initBareRepo } = await import("@platform/git");
                 await initBareRepo(repoRoot);
-                analyticsRepo.logAnalyticsEvent({
-                    eventType: "repo.create",
-                    actorUserId: req.user!.userId,
-                    repositoryId: project.id,
-                    metadata: { ownerId, slug },
-                });
+                // analyticsRepo.logAnalyticsEvent({
+                //     eventType: "repo.create",
+                //     actorUserId: req.user!.userId,
+                //     repositoryId: project.id,
+                //     metadata: { ownerId, slug },
+                // });
             } catch (err) {
                 // If git package fails, delete project and return error
                 projectRepo.deleteProject(project.id);
