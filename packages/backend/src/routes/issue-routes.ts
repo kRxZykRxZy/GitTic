@@ -8,6 +8,7 @@ import * as projectRepo from "../db/repositories/project-repo.js";
 import * as userRepo from "../db/repositories/user-repo.js";
 import { getConfig } from "../config/app-config.js";
 import * as path from "node:path";
+import * as analyticsRepo from "../db/repositories/analytics-repo.js";
 
 const router = Router();
 
@@ -124,6 +125,13 @@ router.post("/:owner/:repo/issues", requireAuth,
       assignees,
       labels,
     });
+
+    analyticsRepo.logAnalyticsEvent({
+      eventType: "issue.open",
+      actorUserId: req.user!.userId,
+      repositoryId: project.id,
+      metadata: { issueId: issue.id, number: issue.number },
+    });
     
     res.status(201).json(issue);
   } catch (err) {
@@ -174,6 +182,15 @@ router.patch("/:owner/:repo/issues/:number", requireAuth,
       state: state as "open" | "closed" | undefined,
       closedById: state === "closed" ? req.user!.userId : undefined,
     });
+
+    if (state === "closed" && issue.state !== "closed") {
+      analyticsRepo.logAnalyticsEvent({
+        eventType: "issue.close",
+        actorUserId: req.user!.userId,
+        repositoryId: project.id,
+        metadata: { issueId: issue.id, number: issue.number },
+      });
+    }
     
     res.json(updated);
   } catch (err) {

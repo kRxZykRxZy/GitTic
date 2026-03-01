@@ -7,6 +7,7 @@ import { startLoadMonitor } from "./services/load-monitor.js";
 import { startMetricsCollector } from "./services/metrics-collector.js";
 import { scheduleBackgroundIndex } from "./services/indexing-service.js";
 import * as clusterRepo from "./db/repositories/cluster-repo.js";
+import { startAnalyticsMaintenance } from "./services/analytics-maintenance.js";
 
 /**
  * Print a startup banner with basic platform info.
@@ -79,6 +80,7 @@ async function main(): Promise<void> {
   const stopMetrics = startMetricsCollector();
   const stopIndexer = scheduleBackgroundIndex();
   const stopClusterCleanup = startClusterCleanup();
+  const stopAnalyticsMaintenance = startAnalyticsMaintenance();
   console.log("[services] Background services started");
 
   // Graceful shutdown of background services
@@ -87,12 +89,16 @@ async function main(): Promise<void> {
     stopMetrics();
     stopIndexer();
     stopClusterCleanup();
+    stopAnalyticsMaintenance();
+    closeWebSocketGateway();
   });
   process.on("SIGINT", () => {
     stopLoadMonitor();
     stopMetrics();
     stopIndexer();
     stopClusterCleanup();
+    stopAnalyticsMaintenance();
+    closeWebSocketGateway();
   });
 }
 

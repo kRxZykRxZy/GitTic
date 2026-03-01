@@ -5,6 +5,7 @@ import { comparePassword } from "@platform/auth";
 import { getConfig } from "../config/app-config.js";
 import * as projectRepo from "../db/repositories/project-repo.js";
 import * as userRepo from "../db/repositories/user-repo.js";
+import * as analyticsRepo from "../db/repositories/analytics-repo.js";
 
 /**
  * Git HTTP smart protocol routes and REST API endpoints
@@ -249,6 +250,12 @@ router.post(
             const config = getConfig();
             const basePath = config.dataDir + "/repos";
             const repoRelPath = getRepoRelPath(project.storagePath, basePath);
+            analyticsRepo.logAnalyticsEvent({
+                eventType: "repo.push",
+                actorUserId: req.user!.userId,
+                repositoryId: project.id,
+                metadata: { owner: String(req.params.owner), repo: String(req.params.repo) },
+            });
             handleGitHttpRequest(basePath, req, res, repoRelPath, "git-receive-pack");
         } catch (err) {
             next(err);

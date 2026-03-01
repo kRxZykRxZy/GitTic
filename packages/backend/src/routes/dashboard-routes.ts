@@ -1,7 +1,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { requireAuth } from "../middleware/auth-guard.js";
 import * as projectRepo from "../db/repositories/project-repo.js";
-import * as sessionRepo from "../db/repositories/session-repo.js";
+import * as analyticsRepo from "../db/repositories/analytics-repo.js";
 
 /**
  * User dashboard routes.
@@ -24,59 +24,46 @@ router.get(
         try {
             const userId = req.user!.userId;
 
-            // Get user's recent projects (last 6)
             const recentProjects = projectRepo.findByOwner(userId, {
                 page: 1,
                 perPage: 6,
             });
 
-            // Get all user projects for stats calculation
             const allProjects = projectRepo.findByOwner(userId, {
                 page: 1,
-                perPage: 1000, // Get all projects
+                perPage: 1000,
             });
 
-            // Calculate real stats
-            const totalCommits = 0; // TODO: Get from git/activity tracking
+            const dashboardStats = analyticsRepo.getUserDashboardStats(userId, 30);
+            const events = analyticsRepo.listRecentEventsByActor(userId, 12);
+
+            const activity = events.map((event) => ({
+                id: event.id,
+                type: event.eventType,
+                description: event.eventType,
+                createdAt: event.occurredAt,
+                user: req.user?.username,
+                repo: recentProjects.find((project) => project.id === event.repositoryId)?.name,
+                metadata: event.metadata,
+            }));
+
             const totalRepos = allProjects?.length || 0;
             const totalStars = allProjects?.reduce((sum, project) => sum + (project.starCount || 0), 0) || 0;
-            const totalCollaborators = 0; // TODO: Get from collaborators table
-
-            // Get real activity feed (last 10 items)
-            // For now, return mock activity data based on actual projects
-            const activity = [];
-            
-            if (recentProjects && recentProjects.length > 0) {
-                recentProjects.forEach((project, index) => {
-                    activity.push({
-                        id: `project-${index}`,
-                        type: "project_created",
-                        description: `Created repository ${project.name}`,
-                        createdAt: project.createdAt,
-                        user: req.user?.username,
-                        repo: project.name,
-                    });
-                });
-            }
-
-            // Add some generic activity
-            activity.push({
-                id: "push-1",
-                type: "commit",
-                description: "Pushed commits to main branch",
-                createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-                user: req.user?.username,
-                repo: recentProjects?.[0]?.name,
-            });
 
             res.json({
                 recentProjects: recentProjects || [],
-                activity: activity.slice(0, 10), // Limit to 10 items
+                activity: activity.slice(0, 10),
                 stats: {
-                    totalCommits,
+                    totalCommits: dashboardStats.totalCommits,
                     totalRepos,
                     totalStars,
-                    totalCollaborators,
+                    totalCollaborators: 0,
+                    totalPullRequests: dashboardStats.totalPullRequests,
+                    totalIssuesOpened: dashboardStats.totalIssuesOpened,
+                    totalIssuesClosed: dashboardStats.totalIssuesClosed,
+                },
+                timeseries: {
+                    activity: dashboardStats.activity,
                 },
             });
         } catch (err) {

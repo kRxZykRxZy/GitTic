@@ -833,6 +833,20 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
     `,
   },
+  {
+    version: 29,
+    description: "Create project_stars table for per-user repository stars",
+    sql: `
+      CREATE TABLE IF NOT EXISTS project_stars (
+        user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (user_id, project_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_project_stars_project ON project_stars(project_id);
+      CREATE INDEX IF NOT EXISTS idx_project_stars_user ON project_stars(user_id);
+    `,
+  },
 ];
 
 

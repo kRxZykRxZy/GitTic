@@ -75,6 +75,38 @@ interface PaginationOptions {
   perPage: number;
 }
 
+interface PullRequestReviewRow {
+  id: string;
+  pr_id: string;
+  user_id: string;
+  state: string;
+  body: string | null;
+  commit_sha: string | null;
+  submitted_at: string;
+}
+
+export interface PullRequestReview {
+  id: string;
+  prId: string;
+  userId: string;
+  state: string;
+  body?: string;
+  commitSha?: string;
+  submittedAt: string;
+}
+
+function toPullRequestReview(row: PullRequestReviewRow): PullRequestReview {
+  return {
+    id: row.id,
+    prId: row.pr_id,
+    userId: row.user_id,
+    state: row.state,
+    body: row.body ?? undefined,
+    commitSha: row.commit_sha ?? undefined,
+    submittedAt: row.submitted_at,
+  };
+}
+
 /**
  * Map database row to PullRequest
  */
@@ -416,6 +448,34 @@ export function removeAssignee(id: string, assigneeId: string): PullRequest | nu
     .run(new Date().toISOString(), id);
   
   return findById(id);
+}
+
+export function listReviews(prId: string): PullRequestReview[] {
+  const db = getDb();
+  const rows = db
+    .prepare("SELECT * FROM pr_reviews WHERE pr_id = ? ORDER BY submitted_at DESC")
+    .all(prId) as PullRequestReviewRow[];
+  return rows.map(toPullRequestReview);
+}
+
+export function countApprovals(prId: string): number {
+  const db = getDb();
+  const result = db
+    .prepare(
+      `SELECT COUNT(*) as count FROM (
+        SELECT user_id, MAX(submitted_at) as latest
+        FROM pr_reviews
+        WHERE pr_id = ?
+        GROUP BY user_id
+      ) latest_reviews
+      JOIN pr_reviews reviews
+        ON reviews.pr_id = ?
+       AND reviews.user_id = latest_reviews.user_id
+       AND reviews.submitted_at = latest_reviews.latest
+      WHERE reviews.state = 'approved'`
+    )
+    .get(prId, prId) as { count: number };
+  return result.count;
 }
 
 export type { PullRequest, CreatePullRequestData, UpdatePullRequestData, PaginationOptions };
