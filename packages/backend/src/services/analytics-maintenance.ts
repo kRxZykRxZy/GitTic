@@ -5,6 +5,11 @@ const RETENTION_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const RETENTION_DAYS = 180;
 
 export function startAnalyticsMaintenance(): () => void {
+  if (!analyticsRepo.ensureAnalyticsTables()) {
+    console.warn("[analytics] Analytics tables unavailable; maintenance tasks will be skipped until schema is created.");
+    return () => {};
+  }
+
   const runRollup = () => {
     try {
       const changes = analyticsRepo.rollupDailyAnalytics(3);
