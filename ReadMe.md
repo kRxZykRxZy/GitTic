@@ -43,6 +43,30 @@ This is a monorepo managed with pnpm workspaces containing:
 - `packages/utils` - Shared utilities
 - `packages/shared` - Shared types and configs
 
+## Contribution Quality Gates
+
+All contributions must pass package-level quality gates before merge:
+
+- `@platform/backend`: `lint`, `typecheck`, and `test`
+- `@platform/shared`: `lint`, `typecheck`, and `test`
+
+Notes:
+
+- Tests in `backend` and `shared` are required and will fail when missing.
+- CI runs a matrix by package and check so failures are isolated quickly.
+
+Run the same checks locally:
+
+```bash
+pnpm --filter @platform/backend run lint
+pnpm --filter @platform/backend run typecheck
+pnpm --filter @platform/backend run test
+
+pnpm --filter @platform/shared run lint
+pnpm --filter @platform/shared run typecheck
+pnpm --filter @platform/shared run test
+```
+
 ## License
 
 MIT 
