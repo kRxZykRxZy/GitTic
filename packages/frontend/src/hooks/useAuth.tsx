@@ -8,7 +8,6 @@ import React, {
 } from "react";
 import { User, LoginRequest, RegisterRequest } from "../types/api";
 import { authService } from "../services/auth-service";
-import { STORAGE_KEYS } from "../utils/constants";
 
 /** Auth context state */
 interface AuthContextValue {
@@ -28,7 +27,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 /** Check if we have a stored token */
 function hasStoredToken(): boolean {
   try {
-    return !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    return !!authService.getStoredAccessToken();
   } catch {
     return false;
   }
@@ -64,9 +63,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   /** On mount, try to load user if token exists */
   useEffect(() => {
+    authService.initializeAuthState();
+
     if (hasStoredToken()) {
       refreshUser();
     }
+
+    return authService.subscribeToAuthStateChanges(() => {
+      if (!hasStoredToken()) {
+        setUser(null);
+      }
+    });
   }, [refreshUser]);
 
   /** Login action */

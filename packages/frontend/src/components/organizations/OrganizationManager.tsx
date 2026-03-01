@@ -17,7 +17,15 @@ import {
   UserX,
   Key
 } from "lucide-react";
-import { authServiceV2, Organization, User } from "../../services/auth-service-v2";
+import {
+  type Organization,
+  getCurrentUserFromStorage,
+  createOrganization,
+  inviteToOrganization,
+  switchOrganization,
+  removeFromOrganization,
+  updateMemberRole,
+} from "../../services/auth-service";
 
 interface OrganizationMember {
   id: string;
@@ -51,7 +59,7 @@ export const OrganizationManager: React.FC = () => {
 
   const loadOrganizations = async () => {
     try {
-      const user = authServiceV2.getCurrentUser();
+      const user = getCurrentUserFromStorage();
       if (user) {
         setOrganizations(user.organizations);
         setCurrentOrganization(user.currentOrganization || user.organizations[0] || null);
@@ -103,7 +111,7 @@ export const OrganizationManager: React.FC = () => {
 
   const handleCreateOrganization = async () => {
     try {
-      const organization = await authServiceV2.createOrganization(newOrg);
+      const organization = await createOrganization(newOrg);
       setOrganizations([...organizations, organization]);
       setCurrentOrganization(organization);
       setShowCreateModal(false);
@@ -117,7 +125,7 @@ export const OrganizationManager: React.FC = () => {
     if (!currentOrganization) return;
     
     try {
-      await authServiceV2.inviteToOrganization(currentOrganization.id, inviteData);
+      await inviteToOrganization(currentOrganization.id, inviteData);
       setShowInviteModal(false);
       setInviteData({ email: "", role: "member" });
       // Reload members
@@ -129,7 +137,7 @@ export const OrganizationManager: React.FC = () => {
 
   const handleSwitchOrganization = async (organization: Organization) => {
     try {
-      await authServiceV2.switchOrganization(organization.id);
+      await switchOrganization(organization.id);
       setCurrentOrganization(organization);
       loadMembers(organization.id);
     } catch (error) {
@@ -141,7 +149,7 @@ export const OrganizationManager: React.FC = () => {
     if (!currentOrganization) return;
     
     try {
-      await authServiceV2.removeFromOrganization(currentOrganization.id, memberId);
+      await removeFromOrganization(currentOrganization.id, memberId);
       setMembers(members.filter(member => member.id !== memberId));
     } catch (error) {
       console.error("Failed to remove member:", error);
@@ -152,7 +160,7 @@ export const OrganizationManager: React.FC = () => {
     if (!currentOrganization) return;
     
     try {
-      await authServiceV2.updateMemberRole(currentOrganization.id, memberId, newRole);
+      await updateMemberRole(currentOrganization.id, memberId, newRole);
       setMembers(members.map(member => 
         member.id === memberId ? { ...member, role: newRole } : member
       ));
