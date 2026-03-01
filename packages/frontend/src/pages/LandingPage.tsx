@@ -9,21 +9,23 @@ import { Icon } from "../components/common/Icon";
 export const LandingPage: React.FC = () => {
   const heroStyle: React.CSSProperties = {
     textAlign: "center",
-    padding: "80px 24px",
-    background: "linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%)",
+    padding: "112px 24px 96px",
+    background:
+      "radial-gradient(1200px 420px at 10% -10%, rgba(88, 166, 255, 0.18), transparent), radial-gradient(900px 300px at 90% -20%, rgba(47, 129, 247, 0.18), transparent), linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%)",
   };
 
   const titleStyle: React.CSSProperties = {
-    fontSize: "48px",
-    fontWeight: 700,
-    marginBottom: "24px",
+    fontSize: "56px",
+    fontWeight: 800,
+    marginBottom: "16px",
     color: "var(--text-primary)",
+    letterSpacing: "-0.04em",
   };
 
   const subtitleStyle: React.CSSProperties = {
     fontSize: "20px",
     color: "var(--text-secondary)",
-    marginBottom: "40px",
+    marginBottom: "32px",
     maxWidth: "600px",
     margin: "0 auto 40px",
     lineHeight: 1.5,
@@ -34,6 +36,21 @@ export const LandingPage: React.FC = () => {
     gap: "16px",
     justifyContent: "center",
     marginTop: "32px",
+    flexWrap: "wrap",
+  };
+
+  const heroTagStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    borderRadius: "999px",
+    border: "1px solid var(--border-color)",
+    background: "rgba(255, 255, 255, 0.7)",
+    padding: "8px 14px",
+    color: "var(--text-secondary)",
+    fontSize: "13px",
+    fontWeight: 600,
+    marginBottom: "28px",
   };
 
   const featuresStyle: React.CSSProperties = {
@@ -57,9 +74,10 @@ export const LandingPage: React.FC = () => {
 
   const featureCardStyle: React.CSSProperties = {
     padding: "24px",
-    background: "var(--bg-secondary)",
+    background: "var(--bg-primary)",
     border: "1px solid var(--border-color)",
-    borderRadius: "var(--radius)",
+    borderRadius: "16px",
+    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
   };
 
   const featureIconStyle: React.CSSProperties = {
@@ -82,7 +100,9 @@ export const LandingPage: React.FC = () => {
   const statsStyle: React.CSSProperties = {
     textAlign: "center",
     padding: "60px 24px",
-    background: "var(--bg-secondary)",
+    background: "linear-gradient(180deg, #f8fbff, var(--bg-secondary))",
+    borderTop: "1px solid var(--border-color)",
+    borderBottom: "1px solid var(--border-color)",
   };
 
   const statsGridStyle: React.CSSProperties = {
@@ -142,6 +162,7 @@ export const LandingPage: React.FC = () => {
     <div>
       {/* Hero Section */}
       <div style={heroStyle}>
+        <span style={heroTagStyle}>⚡ Modern Git platform with integrated CI/CD orchestration</span>
         <h1 style={titleStyle}>Build better software, together</h1>
         <p style={subtitleStyle}>
           A complete platform for version control, code review, project management, and team collaboration.

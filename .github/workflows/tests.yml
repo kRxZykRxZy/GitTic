@@ -12,8 +12,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: ["@platform/backend", "@platform/shared"]
-        check: ["lint", "typecheck", "test"]
+        package: ["@platform/backend", "@platform/shared", "@platform/frontend", "@platform/cluster"]
+        check: ["lint", "test"]
+        include:
+          - package: "@platform/backend"
+            check: "typecheck"
+          - package: "@platform/shared"
+            check: "typecheck"
 
     steps:
       - name: Checkout repository
@@ -26,7 +31,9 @@ jobs:
           cache: "npm"
 
       - name: Setup pnpm
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -39,3 +46,28 @@ jobs:
 
       - name: Run ${{ matrix.check }} for ${{ matrix.package }}
         run: pnpm --filter ${{ matrix.package }} run ${{ matrix.check }}
+
+  monorepo-build:
+    runs-on: ubuntu-latest
+    needs: quality-gates
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all workspace packages
+        run: pnpm run build
