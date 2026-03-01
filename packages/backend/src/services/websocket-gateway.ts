@@ -262,7 +262,9 @@ function cleanupClient(ws: WebSocket): void {
  * @returns The WebSocket server instance.
  */
 export function createWebSocketGateway(server: Server): WebSocketServer {
-  if (_wss) return _wss;
+  if (_wss) {
+    throw new Error("WebSocket gateway has already been initialized");
+  }
 
   _wss = new WebSocketServer({ server, path: "/ws" });
 
@@ -342,6 +344,24 @@ export function createWebSocketGateway(server: Server): WebSocketServer {
   });
 
   return _wss;
+}
+
+/**
+ * Return how many WebSocket gateway instances are currently active.
+ * This should only ever be 0 (before startup/after shutdown) or 1.
+ */
+export function getWebSocketGatewayInstanceCount(): number {
+  return _wss ? 1 : 0;
+}
+
+/**
+ * Assert that there is exactly one active WebSocket gateway instance.
+ */
+export function assertSingleActiveWebSocketGateway(): void {
+  const instanceCount = getWebSocketGatewayInstanceCount();
+  if (instanceCount !== 1) {
+    throw new Error(`Expected exactly 1 active WebSocket gateway instance, found ${instanceCount}`);
+  }
 }
 
 /**

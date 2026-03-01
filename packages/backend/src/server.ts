@@ -51,7 +51,11 @@ import discussionRoutes from "./routes/discussion-routes.js";
 import editorTerminalRoutes from "./routes/editor-terminal-routes.js";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
-import { createWebSocketGateway } from "./services/websocket-gateway.js";
+import {
+    assertSingleActiveWebSocketGateway,
+    closeWebSocketGateway,
+    createWebSocketGateway,
+} from "./services/websocket-gateway.js";
 import { createDeveloperChat } from "./services/developer-chat.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -206,6 +210,7 @@ export function createServer(): { app: express.Express; start: () => Server } {
 
         // Initialize WebSocket servers
         createWebSocketGateway(server);
+        assertSingleActiveWebSocketGateway();
         createDeveloperChat(server);
 
         // Graceful shutdown
@@ -213,6 +218,7 @@ export function createServer(): { app: express.Express; start: () => Server } {
             console.log(`\n${signal} received – shutting down gracefully…`);
             server.close(() => {
                 console.log("HTTP server closed.");
+                closeWebSocketGateway();
                 closeDb();
                 console.log("Database connection closed.");
                 process.exit(0);

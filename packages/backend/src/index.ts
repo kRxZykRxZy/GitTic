@@ -3,7 +3,6 @@ import { validateEnv } from "./config/env-schema.js";
 import { getDb } from "./db/connection.js";
 import { runMigrations } from "./db/migrations.js";
 import { createServer } from "./server.js";
-import { createWebSocketGateway, closeWebSocketGateway } from "./services/websocket-gateway.js";
 import { startLoadMonitor } from "./services/load-monitor.js";
 import { startMetricsCollector } from "./services/metrics-collector.js";
 import { scheduleBackgroundIndex } from "./services/indexing-service.js";
@@ -72,15 +71,11 @@ async function main(): Promise<void> {
   console.log("[db] Migrations complete.");
 
   // ── Step 4: Start server ────────────────────────────────
-  const { app, start } = createServer();
+  const { start } = createServer();
   printBanner(config.host, config.port);
-  const server = start();
+  start();
 
-  // ── Step 5: Start WebSocket gateway ────────────────────
-  createWebSocketGateway(server);
-  console.log("[ws] WebSocket gateway attached to HTTP server");
-
-  // ── Step 6: Start background services ──────────────────
+  // ── Step 5: Start background services ──────────────────
   const stopLoadMonitor = startLoadMonitor();
   const stopMetrics = startMetricsCollector();
   const stopIndexer = scheduleBackgroundIndex();
