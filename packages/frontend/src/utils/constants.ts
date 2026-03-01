@@ -22,6 +22,7 @@ export const ROLE_OPTIONS = [ROLES.USER, ROLES.MODERATOR, ROLES.ADMIN] as const;
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: "platform_access_token",
   REFRESH_TOKEN: "platform_refresh_token",
+  AUTH_USER: "platform_auth_user",
   THEME: "platform_theme",
 } as const;
 

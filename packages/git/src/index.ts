@@ -257,6 +257,11 @@ export {
 } from "./mirror/mirror-manager.js";
 export type { MirrorConfig, MirrorSyncResult, MirrorStatus } from "./mirror/mirror-manager.js";
 
+export {
+  searchCode,
+} from "./search.js";
+export type { CodeSearchResult, SearchCodeOptions } from "./search.js";
+
 // License Detection
 export {
   detectLicense,

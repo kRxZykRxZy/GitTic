@@ -3,6 +3,9 @@ import { requireAuth, optionalAuth } from "../middleware/auth-guard.js";
 import { validate } from "../middleware/input-validator.js";
 import * as projectRepo from "../db/repositories/project-repo.js";
 import * as userRepo from "../db/repositories/user-repo.js";
+import * as prRepo from "../db/repositories/pr-repo.js";
+import * as starRepo from "../db/repositories/star-repo.js";
+import { getCommitCount, listBranches, listTags, searchCode } from "@platform/git";
 import { promises as fs } from "node:fs";
 import * as nodePath from "node:path";
 import { getConfig } from "../config/app-config.js";
@@ -109,6 +112,9 @@ router.get(
 const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 20;
 const MAX_PER_PAGE = 100;
+const DEFAULT_SEARCH_PER_PAGE = 20;
+const MAX_SEARCH_PER_PAGE = 50;
+const MAX_SEARCH_RESULTS = 200;
 
 const README_CANDIDATES = ["README.md", "README", "Readme.md", "readme.md", "ReadMe.md", "README.MD", "readme", "readme.MD", "Readme", "Readme.MD"];
 
@@ -123,6 +129,13 @@ function parsePagination(query: Record<string, unknown>): { page: number; perPag
     const perPage = Math.min(MAX_PER_PAGE, Math.max(1, Number(query.perPage) || DEFAULT_PER_PAGE));
     return { page, perPage };
 }
+
+function parseSearchPagination(query: Record<string, unknown>): { page: number; perPage: number } {
+    const page = Math.max(1, Number(query.page) || DEFAULT_PAGE);
+    const perPage = Math.min(MAX_SEARCH_PER_PAGE, Math.max(1, Number(query.perPage) || DEFAULT_SEARCH_PER_PAGE));
+    return { page, perPage };
+}
+
 
 /**
  * Resolve a project from owner username and repository slug.
@@ -152,6 +165,30 @@ function canAccessRepository(project: NonNullable<ReturnType<typeof projectRepo.
     if (project.ownerId === userId) return true;
     if (role === "admin") return true;
     return false;
+}
+
+function inferLanguageFromPath(filePath: string): string {
+    const extension = nodePath.extname(filePath).toLowerCase();
+    const languageMap: Record<string, string> = {
+        ".ts": "TypeScript",
+        ".tsx": "TypeScript",
+        ".js": "JavaScript",
+        ".jsx": "JavaScript",
+        ".json": "JSON",
+        ".md": "Markdown",
+        ".py": "Python",
+        ".go": "Go",
+        ".rs": "Rust",
+        ".java": "Java",
+        ".c": "C",
+        ".cpp": "C++",
+        ".css": "CSS",
+        ".html": "HTML",
+        ".yml": "YAML",
+        ".yaml": "YAML",
+        ".sh": "Shell",
+    };
+    return languageMap[extension] || "Text";
 }
 
 function getRepositoryFsRoot(project: NonNullable<ReturnType<typeof projectRepo.findById>>): string {
@@ -1135,17 +1172,22 @@ router.get(
                 return;
             }
 
-            // Get real statistics from database and repository
-            const branches = ["main"]; // TODO: Get actual branches from git
-            const commitCount = 0; // TODO: Get actual commit count from git
+            const repoRoot = getRepositoryFsRoot(project);
+            const [branches, tags, commitCount] = await Promise.all([
+                listBranches(repoRoot).catch(() => []),
+                listTags(repoRoot).catch(() => []),
+                getCommitCount(repoRoot, project.defaultBranch || "HEAD").catch(() => 0),
+            ]);
+            const openPullRequests = prRepo.countByProject(project.id, "open");
+            const forks = projectRepo.countForksBySourceProject(project.id);
 
             res.json({
                 commits: commitCount,
                 branches: branches.length,
-                tags: 0, // TODO: Get actual tag count from git
-                openPullRequests: 0, // TODO: Get actual PR count from database
+                tags: tags.length,
+                openPullRequests,
                 stars: project.starCount || 0,
-                forks: 0, // TODO: Get actual fork count from database
+                forks,
             });
         } catch (err) {
             next(err);
@@ -1184,16 +1226,14 @@ router.post(
                 return;
             }
 
-            // TODO: Check if user already starred, implement star tracking table
-            // For now, just increment the star count
-            const updatedProject = projectRepo.updateProject(project.id, {
-                starCount: (project.starCount || 0) + 1,
-            });
+            const created = starRepo.addStar(userId, project.id);
+            const stars = starRepo.countStarsForProject(project.id);
+            projectRepo.updateProject(project.id, { starCount: stars });
 
             res.json({
-                message: "Repository starred successfully",
+                message: created ? "Repository starred successfully" : "Repository already starred",
                 starred: true,
-                stars: updatedProject?.starCount || 0,
+                stars,
             });
         } catch (err) {
             next(err);
@@ -1230,17 +1270,14 @@ router.delete(
                 return;
             }
 
-            // TODO: Check if user actually starred, implement star tracking table
-            // For now, just decrement the star count if it's > 0
-            const currentStars = project.starCount || 0;
-            const updatedProject = projectRepo.updateProject(project.id, {
-                starCount: Math.max(0, currentStars - 1),
-            });
+            const removed = starRepo.removeStar(userId, project.id);
+            const stars = starRepo.countStarsForProject(project.id);
+            projectRepo.updateProject(project.id, { starCount: stars });
 
             res.json({
-                message: "Repository unstarred successfully",
+                message: removed ? "Repository unstarred successfully" : "Repository was not starred",
                 starred: false,
-                stars: updatedProject?.starCount || 0,
+                stars,
             });
         } catch (err) {
             next(err);
@@ -1277,11 +1314,13 @@ router.get(
                 return;
             }
 
-            // TODO: Check actual star status from star tracking table
-            // For now, return false
+            const starred = starRepo.hasStarred(userId, project.id);
+            const stars = starRepo.countStarsForProject(project.id);
+            projectRepo.updateProject(project.id, { starCount: stars });
+
             res.json({
-                starred: false,
-                stars: project.starCount || 0,
+                starred,
+                stars,
             });
         } catch (err) {
             next(err);
@@ -1309,6 +1348,7 @@ router.get(
             const owner = String(req.params.owner).toLowerCase();
             const repo = String(req.params.repo).toLowerCase();
             const query = req.query.q as string;
+            const { page, perPage } = parseSearchPagination(req.query as Record<string, unknown>);
 
             if (!query || query.trim().length === 0) {
                 res.status(400).json({
@@ -1328,31 +1368,34 @@ router.get(
                 res.status(404).json({ error: "Repository not found", code: "NOT_FOUND" });
                 return;
             }
-
-            // TODO: Implement actual code search using git grep or similar
-            // For now, return mock search results
-            const mockResults = [
-                {
-                    path: "src/components/Header.tsx",
-                    content: `const Header = () => {\n  return <div className="header">${query}</div>;\n};`,
-                    lineNumbers: [12, 13, 14],
-                    language: "TypeScript",
-                    lastModified: "2024-01-15",
-                },
-                {
-                    path: "src/pages/Home.tsx",
-                    content: `export const Home = () => {\n  return <h1>Welcome to ${query}</h1>;\n};`,
-                    lineNumbers: [8, 9, 10],
-                    language: "TypeScript",
-                    lastModified: "2024-01-14",
-                },
-            ];
+            const repoRoot = getRepositoryFsRoot(project);
+            const normalizedQuery = query.trim();
+            const rawResults = await searchCode(repoRoot, normalizedQuery, {
+                ref: project.defaultBranch || "HEAD",
+                limit: MAX_SEARCH_RESULTS,
+            });
+            const total = rawResults.length;
+            const offset = (page - 1) * perPage;
+            const pagedResults = rawResults.slice(offset, offset + perPage);
 
             res.json({
-                query: query.trim(),
+                query: normalizedQuery,
                 repository: `${owner}/${repo}`,
-                results: mockResults,
-                total: mockResults.length,
+                results: pagedResults.map((result) => ({
+                    path: result.path,
+                    content: result.line,
+                    lineNumbers: [result.lineNumber],
+                    language: inferLanguageFromPath(result.path),
+                })),
+                pagination: {
+                    page,
+                    perPage,
+                    total,
+                    totalPages: Math.max(1, Math.ceil(total / perPage)),
+                    hasMore: offset + perPage < total,
+                    capped: total >= MAX_SEARCH_RESULTS,
+                },
+                total,
             });
         } catch (err) {
             next(err);
