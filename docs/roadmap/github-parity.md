@@ -50,7 +50,7 @@ This document is the canonical source of truth for GitTic's current capability v
 - Event stream entries for repo-level settings changes.
 
 ### Measurable acceptance criteria
-- 100% of protected branch rules evaluable pre-merge in < 150 ms at p95.
+- p95 latency for evaluating protected-branch rules pre-merge < 150 ms.
 - Import job success rate >= 98% for benchmark migration corpus.
 - Template repository creation-to-first-commit median time <= 2 minutes.
 
