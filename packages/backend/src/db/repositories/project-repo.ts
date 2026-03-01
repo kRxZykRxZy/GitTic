@@ -239,3 +239,14 @@ export function countProjects(): number {
     const result = db.prepare("SELECT COUNT(*) as count FROM projects").get() as { count: number };
     return result.count;
 }
+
+/**
+ * Count the number of forks derived from a project.
+ */
+export function countForksBySourceProject(sourceProjectId: string): number {
+    const db = getDb();
+    const result = db
+        .prepare("SELECT COUNT(*) as count FROM projects WHERE forked_from_id = ?")
+        .get(sourceProjectId) as { count: number };
+    return result.count;
+}
