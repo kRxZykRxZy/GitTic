@@ -127,7 +127,7 @@ async function gitHttpAuth(req: Request, res: Response, next: NextFunction): Pro
  * capability advertisement.
  */
 router.get(
-    "/:owner/:repo.git/info/refs",
+    "/:owner/:repo/info/refs",
     gitHttpAuth,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
@@ -153,7 +153,7 @@ router.get(
             }
 
             const config = getConfig();
-            const basePath = config.dataDir + "/repos";
+            const basePath = config.dataDir;
             const repoRelPath = getRepoRelPath(project.storagePath, basePath);
             handleGitHttpRequest(basePath, req, res, repoRelPath, serviceParam);
         } catch (err) {

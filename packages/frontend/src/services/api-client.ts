@@ -46,7 +46,7 @@ function buildQueryString(
 /**
  * Retrieve the stored access token.
  */
-function getAccessToken(): string | null {
+export function getAccessToken(): string | null {
   try {
     return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
   } catch {

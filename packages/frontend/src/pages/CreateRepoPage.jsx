@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { STORAGE_KEYS } from "../utils/constants";
 
 const CreateRepoPage = () => {
     const [orgs, setOrgs] = useState([]);
@@ -31,7 +32,10 @@ const CreateRepoPage = () => {
         try {
             const res = await fetch('/api/v1/repositories', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization':  `Bearer ${localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)}`
+                },
                 credentials: 'include',
                 body: JSON.stringify({
                     org: selectedOrg,
