@@ -9,6 +9,7 @@ import { getCommitCount, listBranches, listTags, searchCode } from "@platform/gi
 import { promises as fs } from "node:fs";
 import * as nodePath from "node:path";
 import { getConfig } from "../config/app-config.js";
+import * as analyticsRepo from "../db/repositories/analytics-repo.js";
 
 /**
  * Repository management routes providing REST API endpoints for:
@@ -68,6 +69,12 @@ router.post(
             try {
                 const { initBareRepo } = await import("@platform/git");
                 await initBareRepo(repoRoot);
+                analyticsRepo.logAnalyticsEvent({
+                    eventType: "repo.create",
+                    actorUserId: req.user!.userId,
+                    repositoryId: project.id,
+                    metadata: { ownerId, slug },
+                });
             } catch (err) {
                 // If git package fails, delete project and return error
                 projectRepo.deleteProject(project.id);

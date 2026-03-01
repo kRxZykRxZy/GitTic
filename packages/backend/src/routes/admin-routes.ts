@@ -31,40 +31,31 @@ router.use(requireAuth, requireRole("admin"));
  */
 router.get("/dashboard", (req: Request, res: Response, next: NextFunction) => {
     try {
+        const days = Math.min(90, Math.max(7, Number(req.query.days) || 30));
         const totalUsers = userRepo.countUsers();
-        const activeSessions = sessionRepo.countSessions();
         const totalProjects = projectRepo.countProjects();
         const nodes = clusterRepo.listNodes();
         const wsConnections = getActiveConnectionCount();
-
-        // Generate mock growth data for charts (in production, query from analytics)
-        const userGrowth = [
-            { label: "Mon", value: Math.floor(totalUsers * 0.7), timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Tue", value: Math.floor(totalUsers * 0.75), timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Wed", value: Math.floor(totalUsers * 0.8), timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Thu", value: Math.floor(totalUsers * 0.85), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Fri", value: Math.floor(totalUsers * 0.92), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Sat", value: Math.floor(totalUsers * 0.95), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Sun", value: totalUsers, timestamp: new Date().toISOString() },
-        ];
-
-        const projectTrends = [
-            { label: "Mon", value: Math.floor(totalProjects * 0.6), timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Tue", value: Math.floor(totalProjects * 0.65), timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Wed", value: Math.floor(totalProjects * 0.7), timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Thu", value: Math.floor(totalProjects * 0.75), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Fri", value: Math.floor(totalProjects * 0.9), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Sat", value: Math.floor(totalProjects * 0.95), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
-            { label: "Sun", value: totalProjects, timestamp: new Date().toISOString() },
-        ];
+        const snapshot = analyticsRepo.getAdminDashboardSnapshot(days);
 
         const data = {
             totalUsers,
             totalProjects,
             totalClusters: nodes.length,
             activeConnections: wsConnections,
-            userGrowth,
-            projectTrends,
+            userGrowth: analyticsRepo.getUserGrowth(days).map((point) => ({
+                label: point.label,
+                value: point.count,
+                timestamp: `${point.label}T00:00:00.000Z`,
+            })),
+            projectTrends: snapshot.repoCreations,
+            eventTotals: {
+                totalLogins: snapshot.totalLogins,
+                totalPushes: snapshot.totalPushes,
+                totalPrsOpened: snapshot.totalPrsOpened,
+                totalIssuesOpened: snapshot.totalIssuesOpened,
+                totalIssuesClosed: snapshot.totalIssuesClosed,
+            },
         };
 
         res.json({
@@ -235,37 +226,27 @@ router.post(
 router.get("/analytics", (req: Request, res: Response, next: NextFunction) => {
     try {
         const days = Math.min(365, Math.max(1, Number(req.query.days) || 30));
-        const from = req.query.from as string | undefined;
-        const to = req.query.to as string | undefined;
-        const metric = req.query.metric as string | undefined;
+        const snapshot = analyticsRepo.getAdminDashboardSnapshot(days);
 
-        const data: Record<string, unknown> = {
-            userGrowth: analyticsRepo.getUserGrowth(days),
-            activeUsers: analyticsRepo.getActiveUsers(days),
-            projectTrends: analyticsRepo.getProjectTrends(days),
-            pageViews: analyticsRepo.getPageViewStats(days),
-            cloneStats: analyticsRepo.getCloneStats(days),
-            buildStats: analyticsRepo.getBuildStats(days),
-            clusterLoad: analyticsRepo.getClusterLoad(Math.min(days, 30)),
+        const data = {
+            userGrowth: analyticsRepo.getUserGrowth(days).map((point) => ({ label: point.label, value: point.count })),
+            activeUsers: analyticsRepo.getActiveUsers(days).map((point) => ({ label: point.label, value: point.count })),
+            projectTrends: snapshot.repoCreations.map((point) => ({ label: point.label, value: point.value })),
+            pageViews: analyticsRepo.getPageViewStats(days).map((point) => ({ label: point.label, value: point.count })),
+            cloneStats: analyticsRepo.getCloneStats(days).map((point) => ({ label: point.label, value: point.total })),
+            buildStats: analyticsRepo.getBuildStats(days).map((point) => ({ label: point.label, value: point.count })),
+            clusterLoad: analyticsRepo.getClusterLoad(Math.min(days, 30)).map((point) => ({ label: point.label, value: point.total })),
             wsConnections: getActiveConnectionCount(),
+            repoPushes: snapshot.pushes.map((point) => ({ label: point.label, value: point.value })),
+            prOpens: snapshot.prsOpened.map((point) => ({ label: point.label, value: point.value })),
+            issueOpens: snapshot.issuesOpened.map((point) => ({ label: point.label, value: point.value })),
+            issueCloses: snapshot.issuesClosed.map((point) => ({ label: point.label, value: point.value })),
+            logins: snapshot.logins.map((point) => ({ label: point.label, value: point.value })),
         };
-
-        // Custom time-range metric query
-        if (from && to && metric) {
-            data.customRange = analyticsRepo.getCustomTimeRange(metric, from, to);
-        }
 
         res.json({
             success: true,
-            data: Object.entries(data).flatMap(([key, metrics]) => {
-                if (Array.isArray(metrics)) {
-                    return metrics.map((m: any) => ({
-                        ...m,
-                        unit: key,
-                    }));
-                }
-                return [];
-            }),
+            data,
             timestamp: new Date().toISOString(),
         });
     } catch (err) {

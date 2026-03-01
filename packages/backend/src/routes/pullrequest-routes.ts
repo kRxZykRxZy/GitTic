@@ -137,6 +137,13 @@ router.post("/:owner/:repo/pulls", requireAuth,
       authorId: req.user!.userId,
       isDraft: draft,
     });
+
+    analyticsRepo.logAnalyticsEvent({
+      eventType: "pr.open",
+      actorUserId: req.user!.userId,
+      repositoryId: project.id,
+      metadata: { prId: pr.id, number: pr.number },
+    });
     
     res.status(201).json(pr);
   } catch (err) {
@@ -419,6 +426,12 @@ router.post("/:owner/:repo/pulls/:number/merge", requireAuth,
     // Update PR status to merged in database
     const mergeCommitSha = mergeResult.sha || "abc123def456";
     prRepo.markAsMerged(pr.id, mergeCommitSha);
+    analyticsRepo.logAnalyticsEvent({
+      eventType: "pr.merge",
+      actorUserId: req.user!.userId,
+      repositoryId: project.id,
+      metadata: { prId: pr.id, number: pr.number, mergeMethod: String(merge_method) },
+    });
     
     // TODO: In a real implementation:
     // 1. Create merge commit with custom title/message if provided
