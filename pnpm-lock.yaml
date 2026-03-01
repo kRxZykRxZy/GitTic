@@ -4,16 +4,16 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  tailwindcss: 3.4.19
+  postcss: 8.5.6
+  autoprefixer: 10.4.24
+  '@tailwindcss/typography': 0.5.19
+
 importers:
 
   .:
     dependencies:
-      '@tailwindcss/typography':
-        specifier: ^0.5.19
-        version: 0.5.19(tailwindcss@3.4.19(tsx@4.21.0)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.24
-        version: 10.4.24(postcss@8.5.6)
       node-cron:
         specifier: ^4.2.1
         version: 4.2.1
@@ -29,9 +29,6 @@ importers:
       react-syntax-highlighter:
         specifier: ^16.1.0
         version: 16.1.0(react@19.2.4)
-      tailwindcss:
-        specifier: ^3.4.19
-        version: 3.4.19(tsx@4.21.0)(yaml@2.8.2)
       yaml:
         specifier: ^2.8.2
         version: 2.8.2
@@ -173,18 +170,15 @@ importers:
 
   packages/frontend:
     dependencies:
-      autoprefixer:
-        specifier: ^10.4.16
-        version: 10.4.24(postcss@8.5.6)
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
       clsx:
-        specifier: ^2.0.0
+        specifier: ^2.1.1
         version: 2.1.1
       lucide-react:
-        specifier: ^0.312.0
-        version: 0.312.0(react@19.2.4)
+        specifier: ^0.575.0
+        version: 0.575.0(react@19.2.4)
       react:
         specifier: ^19.1.0
         version: 19.2.4
@@ -197,13 +191,13 @@ importers:
       sweetalert2:
         specifier: ^11.22.0
         version: 11.26.20
-      tailwindcss:
-        specifier: ^3.4.0
-        version: 3.4.19(tsx@4.21.0)(yaml@2.8.2)
     devDependencies:
       '@tailwindcss/typography':
-        specifier: ^0.5.19
+        specifier: 0.5.19
         version: 0.5.19(tailwindcss@3.4.19(tsx@4.21.0)(yaml@2.8.2))
+      autoprefixer:
+        specifier: 10.4.24
+        version: 10.4.24(postcss@8.5.6)
       '@types/react':
         specifier: ^19.1.8
         version: 19.2.14
@@ -214,8 +208,11 @@ importers:
         specifier: ^4.3.4
         version: 4.7.0(vite@6.4.1(@types/node@25.3.0)(jiti@1.21.7)(tsx@4.21.0)(yaml@2.8.2))
       postcss:
-        specifier: ^8.5.6
+        specifier: 8.5.6
         version: 8.5.6
+      tailwindcss:
+        specifier: 3.4.19
+        version: 3.4.19(tsx@4.21.0)(yaml@2.8.2)
       rimraf:
         specifier: ^6.1.2
         version: 6.1.3
@@ -1537,10 +1534,10 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-react@0.312.0:
-    resolution: {integrity: sha512-3UZsqyswRXjW4t+nw+InICewSimjPKHuSxiFYqTshv9xkK3tPPntXk/lvXc9pKlXIxm3v9WKyoxcrB6YHhP+dg==}
+  lucide-react@0.575.0:
+    resolution: {integrity: sha512-VuXgKZrk0uiDlWjGGXmKV6MSk9Yy4l10qgVvzGn2AWBx1Ylt0iBexKOAoA6I7JO3m+M9oeovJd3yYENfkUbOeg==}
     peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -3495,7 +3492,7 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react@0.312.0(react@19.2.4):
+  lucide-react@0.575.0(react@19.2.4):
     dependencies:
       react: 19.2.4
 
