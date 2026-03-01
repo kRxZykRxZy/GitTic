@@ -401,7 +401,7 @@ export const OrganizationManager: React.FC = () => {
 
       {/* Create Organization Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold text-text-primary mb-4">Create Organization</h3>
             <div className="space-y-4">
@@ -451,7 +451,7 @@ export const OrganizationManager: React.FC = () => {
 
       {/* Invite Member Modal */}
       {showInviteModal && currentOrganization && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold text-text-primary mb-4">Invite to {currentOrganization.name}</h3>
             <div className="space-y-4">

@@ -18,7 +18,8 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "rm -rf dist *.tsbuildinfo",
-    "test": "vitest run --passWithNoTests",
-    "lint": "tsc --noEmit"
+    "test": "vitest run",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
   }
 }

@@ -2,13 +2,18 @@ name: CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 jobs:
-  test:
+  quality-gates:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ["@platform/backend", "@platform/shared"]
+        check: ["lint", "typecheck", "test"]
 
     steps:
       - name: Checkout repository
@@ -18,19 +23,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Setup pnpm
         run: npm install -g pnpm
-        
+
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      - name: Build server
-        run: pnpm run build
-        
-      - name: Frontend coverage gate
-        run: pnpm --filter @platform/frontend run coverage
+      - name: Check frontend style dependency alignment
+        run: pnpm run check:frontend-style-deps
 
-      - name: Run tests
-        run: pnpm test
+      - name: Check shared package source tree is clean
+        run: pnpm run check:shared-src-clean
+
+      - name: Run ${{ matrix.check }} for ${{ matrix.package }}
+        run: pnpm --filter ${{ matrix.package }} run ${{ matrix.check }}
