@@ -833,6 +833,35 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
     `,
   },
+  {
+    version: 29,
+    description: "Create PR status checks and branch protection settings tables",
+    sql: `
+      CREATE TABLE IF NOT EXISTS pr_status_checks (
+        id           TEXT PRIMARY KEY,
+        pr_id        TEXT NOT NULL REFERENCES pull_requests(id) ON DELETE CASCADE,
+        check_name   TEXT NOT NULL,
+        status       TEXT NOT NULL,
+        details      TEXT,
+        created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(pr_id, check_name)
+      );
+      CREATE INDEX IF NOT EXISTS idx_pr_status_checks_pr ON pr_status_checks(pr_id);
+
+      CREATE TABLE IF NOT EXISTS project_branch_protection (
+        project_id                    TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+        require_pull_request          INTEGER NOT NULL DEFAULT 1,
+        required_approving_review_count INTEGER NOT NULL DEFAULT 0,
+        require_status_checks         INTEGER NOT NULL DEFAULT 0,
+        required_status_checks        TEXT NOT NULL DEFAULT '[]',
+        enforce_admins                INTEGER NOT NULL DEFAULT 0,
+        require_linear_history        INTEGER NOT NULL DEFAULT 0,
+        created_at                    TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at                    TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+    `,
+  },
 ];
 
 

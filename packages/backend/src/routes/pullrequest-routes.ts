@@ -9,6 +9,9 @@ import * as commentRepo from "../db/repositories/comment-repo.js";
 import * as labelRepo from "../db/repositories/label-repo.js";
 import { getConfig } from "../config/app-config.js";
 import * as path from "node:path";
+import * as branchProtectionRepo from "../db/repositories/branch-protection-repo.js";
+import * as prStatusCheckRepo from "../db/repositories/pr-status-check-repo.js";
+import { evaluateMergeDecision } from "../services/pr-merge-decision-service.js";
 
 const router = Router();
 
@@ -217,41 +220,6 @@ router.get("/:owner/:repo/pulls/:number/merge-status", requireAuth, async (req: 
       return;
     }
     
-    // Check if PR is already merged or closed
-    if (pr.state === "merged") {
-      res.json({
-        mergeable: false,
-        canMerge: false,
-        canFastForward: false,
-        conflicts: [],
-        conflictCount: 0,
-        checks: [],
-        checksStatus: "success",
-        reviewsApproved: true,
-        requiresReview: false,
-        reason: "Pull request is already merged",
-        message: "Pull request is already merged",
-      });
-      return;
-    }
-    
-    if (pr.state === "closed") {
-      res.json({
-        mergeable: false,
-        canMerge: false,
-        canFastForward: false,
-        conflicts: [],
-        conflictCount: 0,
-        checks: [],
-        checksStatus: "success",
-        reviewsApproved: true,
-        requiresReview: false,
-        reason: "Pull request is closed",
-        message: "Pull request is closed",
-      });
-      return;
-    }
-    
     // Get actual base and head branches from PR
     const baseBranch = pr.baseBranch;
     const headBranch = pr.headBranch;
@@ -265,37 +233,38 @@ router.get("/:owner/:repo/pulls/:number/merge-status", requireAuth, async (req: 
       const mergeCheck = await git.checkMergeability(repoPath, baseBranch, headBranch);
       const canFastForward = await git.canFastForward(repoPath, headBranch, baseBranch);
       
-      // TODO: Get these from actual PR/CI data
-      const checksStatus = "success"; // TODO: check CI/CD status from actions
-      const reviewsApproved = true; // TODO: check review approvals from reviews table
-      const requiresReview = false; // TODO: check branch protection rules
-      
-      const canMerge = mergeCheck.mergeable && checksStatus === "success" && (reviewsApproved || !requiresReview);
-      
-      res.json({
-        mergeable: mergeCheck.mergeable,
-        canMerge,
+      const protection = branchProtectionRepo.findByProjectId(project.id);
+      const statusChecks = prStatusCheckRepo.listByPrId(pr.id);
+      const approvedReviews = prRepo.countApprovals(pr.id);
+
+      const decision = evaluateMergeDecision({
+        mergeCheck,
         canFastForward,
+        statusChecks,
+        branchProtection: protection,
+        approvedReviews,
+        prState: pr.state,
+      });
+
+      res.json({
+        mergeable: decision.mergeable,
+        canMerge: decision.canMerge,
+        canFastForward: decision.canFastForward,
         conflicts: mergeCheck.conflictFiles,
         conflictCount: mergeCheck.conflictFiles.length,
         checks: mergeCheck.checks,
-        checksStatus,
-        reviewsApproved,
-        requiresReview,
-        reason: mergeCheck.reason,
+        checksStatus: decision.checksStatus,
+        checksDetails: decision.statusChecks,
+        reviewsApproved: decision.reviewsApproved,
+        requiresReview: decision.requiresReview,
+        requiredApprovals: decision.requiredApprovals,
+        approvedReviews: decision.approvedReviews,
+        requiredStatusChecks: decision.requiredStatusChecks,
+        failureReasons: decision.failureReasons,
+        reason: decision.failureReasons[0]?.message ?? mergeCheck.reason,
         baseBranch,
         headBranch,
-        message: !canMerge 
-          ? mergeCheck.conflictFiles.length > 0
-            ? `Pull request has ${mergeCheck.conflictFiles.length} merge conflict(s)` 
-            : !reviewsApproved 
-              ? "Pull request requires approval" 
-              : checksStatus !== "success"
-                ? "Checks must pass before merging"
-                : mergeCheck.reason
-          : canFastForward
-            ? "Pull request can be fast-forward merged"
-            : "Pull request can be merged",
+        message: decision.message,
       });
     } catch (error) {
       console.error("Error checking merge status:", error);
@@ -376,32 +345,53 @@ router.post("/:owner/:repo/pulls/:number/merge", requireAuth,
     const config = getConfig();
     const repoPath = path.join(config.repoStoragePath || "/tmp/repos", ownerUser.id, project.slug);
     
-    // Check for merge conflicts first
+    // Check merge gate status
     let mergeCheck: git.MergeCheckResult;
+    let canFastForward = false;
     try {
       mergeCheck = await git.checkMergeability(repoPath, baseBranch, headBranch);
+      canFastForward = await git.canFastForward(repoPath, headBranch, baseBranch);
     } catch (error) {
-      res.status(500).json({ 
-        error: "Failed to check merge status", 
+      res.status(500).json({
+        error: "Failed to check merge status",
         code: "MERGE_ERROR",
         details: error instanceof Error ? error.message : String(error),
       });
       return;
     }
-    
-    if (!mergeCheck.mergeable || mergeCheck.conflictFiles.length > 0) {
-      res.status(409).json({ 
-        error: "Pull request cannot be merged due to conflicts", 
-        code: "MERGE_CONFLICT",
-        mergeable: mergeCheck.mergeable,
+
+    const protection = branchProtectionRepo.findByProjectId(project.id);
+    const statusChecks = prStatusCheckRepo.listByPrId(pr.id);
+    const approvedReviews = prRepo.countApprovals(pr.id);
+
+    const decision = evaluateMergeDecision({
+      mergeCheck,
+      canFastForward,
+      statusChecks,
+      branchProtection: protection,
+      approvedReviews,
+      prState: pr.state,
+    });
+
+    if (!decision.canMerge) {
+      res.status(409).json({
+        error: "Pull request cannot be merged",
+        code: "MERGE_BLOCKED",
+        mergeable: decision.mergeable,
+        canFastForward: decision.canFastForward,
         conflicts: mergeCheck.conflictFiles,
         conflictCount: mergeCheck.conflictFiles.length,
         checks: mergeCheck.checks,
-        reason: mergeCheck.reason,
+        checksStatus: decision.checksStatus,
+        requiredStatusChecks: decision.requiredStatusChecks,
+        approvedReviews: decision.approvedReviews,
+        requiredApprovals: decision.requiredApprovals,
+        failureReasons: decision.failureReasons,
+        reason: decision.failureReasons[0]?.message ?? mergeCheck.reason,
       });
       return;
     }
-    
+
     // Perform the actual merge using git package
     let mergeResult: git.MergeResult;
     try {
